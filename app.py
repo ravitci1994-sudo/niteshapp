@@ -4,7 +4,10 @@ from datetime import datetime
 import math
 import io
 import os
+import smtplib
+from email.message import EmailMessage
 import html as html_lib
+import plotly.express as px  # <-- Naya library graphs ke liye add kiya gaya hai
 
 # 1. Page Configuration
 st.set_page_config(page_title="Sales Manager Live Monitoring Dashboard", layout="wide", initial_sidebar_state="expanded")
@@ -1062,6 +1065,58 @@ elif "Dashboard" in selected_nav:
             )
             st.markdown(col3_html, unsafe_allow_html=True)
 
+        # ----------------- PLOTLY GRAPHICAL ANALYTICS SECTION -----------------
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("### 📈 Graphical Analytics")
+        
+        graph_col1, graph_col2 = st.columns(2)
+        
+        with graph_col1:
+            if total_trips > 0:
+                status_df = pd.DataFrame({
+                    'Status': ['On-Time', 'Delay'],
+                    'Trips Count': [ontime_trips, delay_trips]
+                })
+                fig_donut = px.pie(status_df, values='Trips Count', names='Status', hole=0.6,
+                                   color='Status', color_discrete_map={'On-Time':'#2ec4b6', 'Delay':'#e63946'})
+                fig_donut.update_layout(
+                    title_text='Trips Performance Status', 
+                    title_x=0.5, 
+                    template='plotly_dark',
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    margin=dict(t=50, b=20, l=10, r=10)
+                )
+                st.plotly_chart(fig_donut, use_container_width=True)
+            else:
+                st.info("No data available for Performance Chart")
+                
+        with graph_col2:
+            if lb_clients:
+                client_names = []
+                client_totals = []
+                for c_name in lb_clients[:5]: # Top 5 clients
+                    client_names.append(c_name)
+                    client_totals.append(len(perf_mis[perf_mis['VendorName'] == c_name]))
+                
+                bar_df = pd.DataFrame({'Client': client_names, 'Total Trips': client_totals})
+                fig_bar = px.bar(bar_df, x='Client', y='Total Trips', text='Total Trips', color='Client',
+                                 color_discrete_sequence=['#90e0ef', '#ffb703', '#f72585', '#2ec4b6', '#e63946'])
+                fig_bar.update_layout(
+                    title_text='Top Customers by Trip Volume', 
+                    title_x=0.5,
+                    template='plotly_dark',
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    margin=dict(t=50, b=20, l=10, r=10)
+                )
+                st.plotly_chart(fig_bar, use_container_width=True)
+            else:
+                st.info("No data available for Customer Chart")
+                
+        st.markdown("<br>", unsafe_allow_html=True)
+        # ---------------------------------------------------------------------
+
         if not filtered_mis.empty:
             show_reported_vehicle_table(filtered_mis, unique_key="dash")
         else:
@@ -1386,7 +1441,7 @@ elif "Monthly Breakdown" in selected_nav:
         else:
             st.warning("Date column not found for monthly breakdown.")
     else:
-        st.info("👈 Kripya pehle MIS file upload karein.")
+        st.info("👈 Kripya pehle MIS files upload karein.")
 
 # ----------------- 7. USER & ACCESS CONTROL -----------------
 elif "User & Access Control" in selected_nav:
