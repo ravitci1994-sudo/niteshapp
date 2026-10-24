@@ -12,7 +12,7 @@ import plotly.express as px
 # 1. Page Configuration
 st.set_page_config(page_title="Sales Manager Live Monitoring Dashboard", layout="wide", initial_sidebar_state="expanded")
 
-# Custom CSS for Dynamic & Attractive Modern Dark Theme Styling
+# Custom CSS for Dynamic & Attractive Modern Dark Theme Enterprise Styling (Inspired by SaaS Dashboards)
 st.markdown("""
     <style>
     .main, [data-testid="stAppViewContainer"] {
@@ -20,7 +20,7 @@ st.markdown("""
     }
     .metric-card {
         background: linear-gradient(145deg, #1c2541, #131b2e);
-        padding: 22px;
+        padding: 20px;
         border-radius: 14px;
         border: 1px solid #48cae4;
         box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
@@ -34,17 +34,15 @@ st.markdown("""
         border-color: #90e0ef;
     }
     .metric-title {
-        font-size: 15px;
+        font-size: 13px;
         color: #90e0ef;
         font-weight: 800;
         text-transform: uppercase;
         letter-spacing: 0.8px;
-        border-bottom: 2px solid rgba(72, 202, 228, 0.3);
-        padding-bottom: 6px;
-        margin-bottom: 10px;
+        margin-bottom: 8px;
     }
     .metric-value {
-        font-size: 36px;
+        font-size: 30px;
         color: #ffffff;
         font-weight: 900;
         margin-top: 5px;
@@ -54,6 +52,7 @@ st.markdown("""
         font-size: 12px;
         color: #2ec4b6;
         margin-top: 5px;
+        font-weight: 700;
     }
     .custom-table-container {
         overflow-x: auto;
@@ -916,6 +915,32 @@ elif "Dashboard" in selected_nav:
         mis_df = st.session_state.mis_data if has_mis else pd.DataFrame()
 
         st.markdown("---")
+        
+        # --- SaaS Enterprise Top Row: 4 Metric Cards (Like Reference Image) ---
+        if not filtered_mis.empty and 'Status_Category' in filtered_mis.columns:
+            perf_mis = filtered_mis[filtered_mis['Status_Category'].isin([ONTIME, DELAY])].copy()
+        else:
+            perf_mis = pd.DataFrame(columns=filtered_mis.columns)
+
+        total_trips = len(perf_mis)
+        ontime_trips = int((perf_mis['Status_Category'] == ONTIME).sum()) if not perf_mis.empty else 0
+        delay_trips = int((perf_mis['Status_Category'] == DELAY).sum()) if not perf_mis.empty else 0
+        ontime_pct = round((ontime_trips / total_trips) * 100, 1) if total_trips > 0 else 0
+        total_callouts_count = len(callout_df) if not callout_df.empty else 0
+
+        # Top 4 SaaS Metrics Grid
+        m1, m2, m3, m4 = st.columns(4)
+        with m1:
+            st.markdown(f'<div class="metric-card"><div class="metric-title">Total Callouts</div><div class="metric-value">{total_callouts_count}</div><div class="metric-sub-green">Breakdown & Accident</div></div>', unsafe_allow_html=True)
+        with m2:
+            st.markdown(f'<div class="metric-card"><div class="metric-title">Total Performance Trips</div><div class="metric-value">{total_trips}</div><div class="metric-sub-green">Active Fleet</div></div>', unsafe_allow_html=True)
+        with m3:
+            st.markdown(f'<div class="metric-card"><div class="metric-title">On-Time Deliveries</div><div class="metric-value" style="color:#2ec4b6;">{ontime_trips} ({ontime_pct}%)</div><div class="metric-sub-green">On Schedule</div></div>', unsafe_allow_html=True)
+        with m4:
+            st.markdown(f'<div class="metric-card"><div class="metric-title">Delayed Trips</div><div class="metric-value" style="color:#e63946;">{delay_trips}</div><div class="metric-sub-green" style="color:#e63946;">Requires Attention</div></div>', unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
         clients_set = set()
         if not mis_df.empty and 'VendorName' in mis_df.columns:
             clients_set.update(mis_df['VendorName'].dropna().unique())
@@ -934,134 +959,8 @@ elif "Dashboard" in selected_nav:
             if not filtered_mis.empty and 'VendorName' in filtered_mis.columns:
                 filtered_mis = filtered_mis[filtered_mis['VendorName'] == selected_client]
 
-        total_callouts = len(filtered_callout)
-        co_has_vendor = not filtered_callout.empty and 'VendorName' in filtered_callout.columns
-        dhl_c = int((filtered_callout['VendorName'] == 'DHL').sum()) if co_has_vendor else 0
-        busy_c = int((filtered_callout['VendorName'] == 'Busybees').sum()) if co_has_vendor else 0
-        trk_c = int((filtered_callout['VendorName'] == 'Trackon').sum()) if co_has_vendor else 0
-
-        if co_has_vendor and 'Parsed_Date' in filtered_callout.columns:
-            aug_df = filtered_callout[filtered_callout['Parsed_Date'].dt.month == 8]
-            sept_df = filtered_callout[filtered_callout['Parsed_Date'].dt.month == 9]
-            oct_df = filtered_callout[filtered_callout['Parsed_Date'].dt.month == 10]
-
-            aug_dhl, aug_busy, aug_trk = int((aug_df['VendorName'] == 'DHL').sum()), int((aug_df['VendorName'] == 'Busybees').sum()), int((aug_df['VendorName'] == 'Trackon').sum())
-            sept_dhl, sept_busy, sept_trk = int((sept_df['VendorName'] == 'DHL').sum()), int((sept_df['VendorName'] == 'Busybees').sum()), int((sept_df['VendorName'] == 'Trackon').sum())
-            oct_dhl, oct_busy, oct_trk = int((oct_df['VendorName'] == 'DHL').sum()), int((oct_df['VendorName'] == 'Busybees').sum()), int((oct_df['VendorName'] == 'Trackon').sum())
-        else:
-            aug_dhl, aug_busy, aug_trk, sept_dhl, sept_busy, sept_trk, oct_dhl, oct_busy, oct_trk = [0] * 9
-
-        if not filtered_mis.empty and 'Status_Category' in filtered_mis.columns:
-            perf_mis = filtered_mis[filtered_mis['Status_Category'].isin([ONTIME, DELAY])].copy()
-        else:
-            perf_mis = pd.DataFrame(columns=filtered_mis.columns)
-
-        total_trips = len(perf_mis)
-        ontime_trips = int((perf_mis['Status_Category'] == ONTIME).sum()) if not perf_mis.empty else 0
-        delay_trips = int((perf_mis['Status_Category'] == DELAY).sum()) if not perf_mis.empty else 0
-
-        ontime_pct = round((ontime_trips / total_trips) * 100, 1) if total_trips > 0 else 0
-        delay_pct = round((delay_trips / total_trips) * 100, 1) if total_trips > 0 else 0
-
-        col1, col2, col3 = st.columns([1.2, 1.8, 1])
-
-        with col1:
-            client_label = "ALL CLIENTS" if selected_client == "ALL" else html_lib.escape(str(selected_client).upper())
-            col1_html = (
-                f'<div class="metric-card" style="min-height: 200px;">'
-                f'<div class="metric-title">📊 TOTAL CALLOUT COUNT ({client_label})</div>'
-                f'<div class="metric-value">{total_callouts}</div>'
-                f'<div class="metric-sub-green" style="margin-bottom: 6px; font-weight:700;">Breakdown & Accident</div>'
-                f'<div style="display: flex; justify-content: space-between; font-size: 12px; margin-top: 6px; padding-top: 6px; border-top: 1px solid #48cae4; color: #ffffff;">'
-                f'<span>DHL: <b style="color:#2ec4b6;">{dhl_c}</b></span>'
-                f'<span>Busybees: <b style="color:#ffb703;">{busy_c}</b></span>'
-                f'<span>Trackon: <b style="color:#e63946;">{trk_c}</b></span>'
-                f'</div>'
-                f'<div style="font-size: 11px; color: #90e0ef; margin-top: 8px; font-weight: 800; text-transform: uppercase;">August Breakdown</div>'
-                f'<div style="display: flex; justify-content: space-between; font-size: 11px; color: #ffffff;">'
-                f'<span>DHL: <b style="color:#2ec4b6;">{aug_dhl}</b></span>'
-                f'<span>Busybees: <b style="color:#ffb703;">{aug_busy}</b></span>'
-                f'<span>Trackon: <b style="color:#e63946;">{aug_trk}</b></span>'
-                f'</div>'
-                f'<div style="font-size: 11px; color: #90e0ef; margin-top: 6px; font-weight: 800; text-transform: uppercase;">September Breakdown</div>'
-                f'<div style="display: flex; justify-content: space-between; font-size: 11px; color: #ffffff;">'
-                f'<span>DHL: <b style="color:#2ec4b6;">{sept_dhl}</b></span>'
-                f'<span>Busybees: <b style="color:#ffb703;">{sept_busy}</b></span>'
-                f'<span>Trackon: <b style="color:#e63946;">{sept_trk}</b></span>'
-                f'</div>'
-                f'<div style="font-size: 11px; color: #90e0ef; margin-top: 6px; font-weight: 800; text-transform: uppercase;">October Breakdown</div>'
-                f'<div style="display: flex; justify-content: space-between; font-size: 11px; color: #ffffff;">'
-                f'<span>DHL: <b style="color:#2ec4b6;">{oct_dhl}</b></span>'
-                f'<span>Busybees: <b style="color:#ffb703;">{oct_busy}</b></span>'
-                f'<span>Trackon: <b style="color:#e63946;">{oct_trk}</b></span>'
-                f'</div>'
-                f'</div>'
-            )
-            st.markdown(col1_html, unsafe_allow_html=True)
-
-        with col2:
-            col2_html = (
-                f'<div class="metric-card" style="min-height: 200px;">'
-                f'<div class="metric-title">⚡ OVER ALL PERFORMANCE</div>'
-                f'<div style="display: flex; justify-content: space-around; align-items: center; text-align: center; margin-top: 35px; padding-top: 15px; border-top: 1px solid #48cae4;">'
-                f'<div>'
-                f'<div style="font-size: 12px; color: #90e0ef; font-weight: 800; text-transform: uppercase;">Total Count</div>'
-                f'<div style="font-size: 28px; font-weight: 900; color: #ffffff; margin-top: 4px;">{total_trips}</div>'
-                f'<div style="font-size: 12px; color: #8d99ae; margin-top: 2px;">Performance Trips</div>'
-                f'</div>'
-                f'<div style="border-left: 1px solid #48cae4; height: 55px;"></div>'
-                f'<div>'
-                f'<div style="font-size: 12px; color: #90e0ef; font-weight: 800; text-transform: uppercase;">On-Time</div>'
-                f'<div style="font-size: 28px; font-weight: 900; color: #2ec4b6; margin-top: 4px;">{ontime_trips}</div>'
-                f'<div style="font-size: 13px; font-weight: 900; color: #2ec4b6; margin-top: 2px;">{ontime_pct}%</div>'
-                f'</div>'
-                f'<div style="border-left: 1px solid #48cae4; height: 55px;"></div>'
-                f'<div>'
-                f'<div style="font-size: 12px; color: #90e0ef; font-weight: 800; text-transform: uppercase;">Delay</div>'
-                f'<div style="font-size: 28px; font-weight: 900; color: #e63946; margin-top: 4px;">{delay_trips}</div>'
-                f'<div style="font-size: 13px; font-weight: 900; color: #e63946; margin-top: 2px;">{delay_pct}%</div>'
-                f'</div>'
-                f'</div>'
-                f'</div>'
-            )
-            st.markdown(col2_html, unsafe_allow_html=True)
-
-        with col3:
-            lb_clients = perf_mis['VendorName'].value_counts().index.tolist() if not perf_mis.empty and 'VendorName' in perf_mis.columns else []
-            lb_rows_html = ""
-            for c_name in lb_clients[:4]:
-                c_df = perf_mis[perf_mis['VendorName'] == c_name]
-                c_tot = len(c_df)
-                c_ontime = int((c_df['Status_Category'] == ONTIME).sum()) if 'Status_Category' in c_df.columns else 0
-                c_delay = int((c_df['Status_Category'] == DELAY).sum()) if 'Status_Category' in c_df.columns else 0
-
-                lb_rows_html += (
-                    f'<div style="border-top: 1px solid #48cae4; padding-top: 8px; margin-top: 8px;">'
-                    f'<div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: 900;">'
-                    f'<span style="color: #ffffff;">{html_lib.escape(str(c_name))}</span>'
-                    f'<span style="color: #90e0ef;">Total: {c_tot}</span>'
-                    f'</div>'
-                    f'<div style="display: flex; justify-content: space-between; font-size: 12px; margin-top: 4px;">'
-                    f'<span style="color: #2ec4b6;">On-Time: <b>{c_ontime}</b></span>'
-                    f'<span style="color: #e63946;">Delay: <b>{c_delay}</b></span>'
-                    f'</div>'
-                    f'</div>'
-                )
-
-            if not lb_rows_html:
-                lb_rows_html = '<div style="font-size: 13px; color: #90e0ef; margin-top: 8px;">No MIS performance data</div>'
-
-            col3_html = (
-                f'<div class="metric-card" style="min-height: 200px;">'
-                f'<div class="metric-title">🏆 CUSTOMER LEADERBOARD</div>'
-                f'{lb_rows_html}'
-                f'</div>'
-            )
-            st.markdown(col3_html, unsafe_allow_html=True)
-
-        # Plotly Graphical Analytics
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("### 📈 Graphical Analytics")
+        # Plotly Graphical Analytics Row (Donut & Trend Line like reference image)
+        st.markdown("### 📈 Analytics & Trends")
         
         graph_col1, graph_col2 = st.columns(2)
         
@@ -1074,7 +973,7 @@ elif "Dashboard" in selected_nav:
                 fig_donut = px.pie(status_df, values='Trips Count', names='Status', hole=0.6,
                                    color='Status', color_discrete_map={'On-Time':'#2ec4b6', 'Delay':'#e63946'})
                 fig_donut.update_layout(
-                    title_text='Trips Performance Status', 
+                    title_text='Trip Status Distribution', 
                     title_x=0.5, 
                     template='plotly_dark',
                     plot_bgcolor='rgba(0,0,0,0)',
@@ -1082,27 +981,22 @@ elif "Dashboard" in selected_nav:
                     margin=dict(t=50, b=20, l=10, r=10)
                 )
                 st.plotly_chart(fig_donut, use_container_width=True)
+            else:
+                st.info("No data available for Status Chart")
                 
         with graph_col2:
-            if lb_clients:
-                client_names = []
-                client_totals = []
-                for c_name in lb_clients[:5]:
-                    client_names.append(c_name)
-                    client_totals.append(len(perf_mis[perf_mis['VendorName'] == c_name]))
-                
-                bar_df = pd.DataFrame({'Client': client_names, 'Total Trips': client_totals})
-                fig_bar = px.bar(bar_df, x='Client', y='Total Trips', text='Total Trips', color='Client',
-                                 color_discrete_sequence=['#90e0ef', '#ffb703', '#f72585', '#2ec4b6', '#e63946'])
-                fig_bar.update_layout(
-                    title_text='Top Customers by Trip Volume', 
-                    title_x=0.5,
+            if not filtered_mis.empty and 'Parsed_Date' in filtered_mis.columns:
+                trend_df = filtered_mis.dropna(subset=['Parsed_Date']).groupby(filtered_mis['Parsed_Date'].dt.date).size().reset_index(name='Daily Trips')
+                fig_line = px.line(trend_df, x='Parsed_Date', y='Daily Trips', markers=True, title='Daily Dispatch Trend')
+                fig_line.update_layout(
                     template='plotly_dark',
                     plot_bgcolor='rgba(0,0,0,0)',
                     paper_bgcolor='rgba(0,0,0,0)',
                     margin=dict(t=50, b=20, l=10, r=10)
                 )
-                st.plotly_chart(fig_bar, use_container_width=True)
+                st.plotly_chart(fig_line, use_container_width=True)
+            else:
+                st.info("No date trend data available")
 
         if not filtered_mis.empty:
             show_reported_vehicle_table(filtered_mis, unique_key="dash")
@@ -1436,6 +1330,8 @@ elif "User & Access Control" in selected_nav:
         
         available_staff_names = []
         if st.session_state.mis_data is not None and not st.session_state.mis_data.empty:
+            s_col = next((c for c in st.main_data.columns if 'controlling' in c.lower() or 'staff' in c.lower()), None) if 'main_data' in globals() else None
+            # fallback check in mis_data
             s_col = next((c for c in st.session_state.mis_data.columns if 'controlling' in c.lower() or 'staff' in c.lower()), None)
             if s_col:
                 available_staff_names = sorted([str(x).strip() for x in st.session_state.mis_data[s_col].dropna().unique() if str(x).strip() != ""])
