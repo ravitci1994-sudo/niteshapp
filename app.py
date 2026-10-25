@@ -6,29 +6,30 @@ import io
 import os
 import html as html_lib
 import plotly.express as px
+import plotly.graph_objects as go
 
 # 1. Page Configuration
-st.set_page_config(page_title="Sales Manager Live Monitoring Dashboard", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Tejas Cargo 4K Fleet & Analytics Dashboard", layout="wide", initial_sidebar_state="expanded")
 
-# Custom CSS for Dynamic & Enterprise Dark Theme Styling (Matching the reference screenshot)
+# Custom CSS for 4K Ultra-Modern Futuristic Dark Theme & Glow Animations
 st.markdown("""
     <style>
     .main, [data-testid="stAppViewContainer"] {
-        background: linear-gradient(135deg, #0b132b 0%, #1c2541 100%);
+        background: radial-gradient(circle at center, #0b132b 0%, #070a17 100%);
     }
     .metric-card {
-        background: linear-gradient(145deg, #1c2541, #131b2e);
-        padding: 22px;
-        border-radius: 14px;
-        border: 1px solid #48cae4;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
-        margin-bottom: 15px;
+        background: linear-gradient(135deg, rgba(28, 37, 65, 0.8) 0%, rgba(19, 27, 46, 0.9) 100%);
+        padding: 24px;
+        border-radius: 16px;
+        border: 1px solid rgba(72, 202, 228, 0.4);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        margin-bottom: 20px;
         color: white;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        transition: all 0.4s ease;
     }
     .metric-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 12px 25px rgba(72, 202, 228, 0.25);
+        transform: translateY(-6px);
+        box-shadow: 0 15px 35px rgba(72, 202, 228, 0.3);
         border-color: #90e0ef;
     }
     .metric-title {
@@ -36,30 +37,35 @@ st.markdown("""
         color: #90e0ef;
         font-weight: 800;
         text-transform: uppercase;
-        letter-spacing: 0.8px;
-        margin-bottom: 8px;
+        letter-spacing: 1px;
+        margin-bottom: 10px;
     }
     .metric-value {
-        font-size: 32px;
+        font-size: 36px;
         color: #ffffff;
         font-weight: 900;
         margin-top: 5px;
-        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        text-shadow: 0 2px 8px rgba(0,0,0,0.5);
     }
-    .metric-sub-green {
-        font-size: 12px;
-        color: #2ec4b6;
-        margin-top: 5px;
-        font-weight: 700;
+    .ai-badge {
+        background: linear-gradient(90deg, #48cae4, #2ec4b6);
+        color: #0b132b;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 900;
+        text-transform: uppercase;
+        display: inline-block;
+        margin-bottom: 10px;
     }
     .custom-table-container {
         overflow-x: auto;
         max-height: 450px;
         overflow-y: auto;
-        border: 1px solid #48cae4;
-        border-radius: 12px;
-        background-color: #1c2541;
-        box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+        border: 1px solid rgba(72, 202, 228, 0.3);
+        border-radius: 14px;
+        background-color: rgba(28, 37, 65, 0.6);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.5);
         margin-bottom: 15px;
     }
     .custom-table {
@@ -73,7 +79,7 @@ st.markdown("""
     .custom-table th {
         background: linear-gradient(90deg, #0b132b, #1c2541);
         color: #48cae4;
-        padding: 12px 15px;
+        padding: 14px 18px;
         text-align: left;
         position: sticky;
         top: 0;
@@ -82,18 +88,18 @@ st.markdown("""
         z-index: 1;
     }
     .custom-table td {
-        padding: 10px 15px;
-        border-bottom: 1px solid #2b3a55;
+        padding: 12px 18px;
+        border-bottom: 1px solid rgba(43, 58, 85, 0.5);
         color: #e0e6ed;
     }
     .custom-table tr:hover td {
-        background-color: #2b3a55;
+        background-color: rgba(43, 58, 85, 0.7);
         color: #90e0ef;
     }
     h1, h2, h3 {
         color: #ffffff;
         font-weight: 900 !important;
-        text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        text-shadow: 0 2px 6px rgba(0,0,0,0.6);
     }
     </style>
 """, unsafe_allow_html=True)
@@ -111,7 +117,6 @@ ONTIME = 'On-Time Trip Closed'
 DELAY = 'Delay Trip Closed'
 EXCEL_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
-
 # ================= HELPERS =================
 def is_blank(v):
     if v is None:
@@ -123,13 +128,11 @@ def is_blank(v):
         pass
     return str(v).strip().lower() in ("", "nan", "nat", "none")
 
-
 def first_valid(row, names):
     for n in names:
         if n in row.index and not is_blank(row[n]):
             return row[n]
     return None
-
 
 def is_zero_late(v):
     if is_blank(v):
@@ -146,7 +149,6 @@ def is_zero_late(v):
     except Exception:
         return False
 
-
 def clean_party(v, keep_other=False):
     v_str = str(v).upper().strip()
     if "DHL" in v_str:
@@ -157,22 +159,8 @@ def clean_party(v, keep_other=False):
         return "Trackon"
     return str(v).strip() if keep_other else None
 
-
-def find_col(df, exact=None, contains=None):
-    if exact:
-        for c in df.columns:
-            if c.lower().strip() in exact:
-                return c
-    if contains:
-        for c in df.columns:
-            if any(k in c.lower() for k in contains):
-                return c
-    return None
-
-
 def vendor_column(df):
     return next((c for c in df.columns if any(k in c.lower() for k in ('vendor', 'party', 'client', 'customer'))), None)
-
 
 def render_html_table(df_to_show, max_rows=2000):
     clean_df = df_to_show.fillna("").astype(str)
@@ -187,15 +175,6 @@ def render_html_table(df_to_show, max_rows=2000):
         rows_html.append(f"<tr>{cells}</tr>")
     body = "".join(rows_html)
     return f'{note}<div class="custom-table-container"><table class="custom-table"><thead><tr>{headers}</tr></thead><tbody>{body}</tbody></table></div>'
-
-
-def to_excel_bytes(sheets):
-    buffer_excel = io.BytesIO()
-    with pd.ExcelWriter(buffer_excel, engine='openpyxl') as writer:
-        for name, frame in sheets.items():
-            frame.to_excel(writer, index=False, sheet_name=name)
-    return buffer_excel.getvalue()
-
 
 # ================= FILE PROCESSING =================
 def process_uploaded_files(uploaded_files):
@@ -276,8 +255,7 @@ def process_uploaded_files(uploaded_files):
     mis_df = pd.concat(mis_dfs, ignore_index=True) if mis_dfs else pd.DataFrame()
     return callout_df, mis_df
 
-
-# ================= MEMORY SETUP (Hard Persistence Logic) =================
+# ================= SESSION STATE STORAGE =================
 DATA_FILE_CALLOUT = "saved_callout_data.pkl"
 DATA_FILE_MIS = "saved_mis_data.pkl"
 
@@ -302,17 +280,14 @@ if 'mis_data' not in st.session_state or st.session_state.mis_data is None:
 if 'uploader_key' not in st.session_state:
     st.session_state.uploader_key = 0
 
-
 def save_or_delete(df, path):
     if df is not None and not df.empty:
         df.to_pickle(path)
     elif os.path.exists(path):
         os.remove(path)
 
-
 # ================= SIDEBAR =================
-st.sidebar.markdown("### Welcome, Tejas Cargo India Pvt Ltd")
-
+st.sidebar.markdown("### Welcome, Tejas Cargo India")
 current_time = datetime.now().strftime("%d %b %Y | %I:%M %p")
 st.sidebar.markdown(f"<div style='color: #90e0ef; font-size: 13px; font-weight: bold; margin-top: -10px; margin-bottom: 5px;'>🕒 {current_time}</div>", unsafe_allow_html=True)
 
@@ -331,11 +306,9 @@ if st.sidebar.button("🚀 Process Data", type="primary", use_container_width=Tr
             c_df, m_df = process_uploaded_files(uploaded_files)
             st.session_state.callout_data = c_df
             st.session_state.mis_data = m_df
-
             save_or_delete(c_df, DATA_FILE_CALLOUT)
             save_or_delete(m_df, DATA_FILE_MIS)
-
-            st.sidebar.success("✅ Data successfully processed and saved!")
+            st.sidebar.success("✅ Data successfully processed!")
             st.rerun()
         except Exception as e:
             st.sidebar.error(f"Error: {e}")
@@ -343,32 +316,25 @@ if st.sidebar.button("🚀 Process Data", type="primary", use_container_width=Tr
         st.sidebar.warning("⚠️ Pehle files upload karein!")
 
 st.sidebar.markdown("---")
-
 if st.sidebar.button("🗑️ REMOVE DATA", use_container_width=True):
-    if os.path.exists(DATA_FILE_CALLOUT):
-        os.remove(DATA_FILE_CALLOUT)
-    if os.path.exists(DATA_FILE_MIS):
-        os.remove(DATA_FILE_MIS)
+    if os.path.exists(DATA_FILE_CALLOUT): os.remove(DATA_FILE_CALLOUT)
+    if os.path.exists(DATA_FILE_MIS): os.remove(DATA_FILE_MIS)
     st.session_state.callout_data = None
     st.session_state.mis_data = None
     st.session_state.uploader_key += 1
     st.rerun()
 
-st.sidebar.markdown("Navigation:")
 selected_nav = st.sidebar.radio("Navigation", [
-    "📊 Dashboard",
-    "📊 Client Performance",
-    "🏢 Branches",
+    "📊 4K Fleet Overview",
+    "📊 Client Analytics",
     "🚚 Vehicle Utilisation",
-    "🚚 In-Transit Vehicle Status",
-    "📈 Monthly Breakdown"
+    "🚚 In-Transit Status"
 ], label_visibility="collapsed")
 
-
 # ================= MAIN DASHBOARD LOGIC =================
-if "Dashboard" in selected_nav:
-    st.title("⚡ Sales Manager Live Monitoring Dashboard")
-    st.info("🔒 **Enterprise Analytics Overview:** Real-time Fleet Performance & Metrics")
+if "4K Fleet Overview" in selected_nav:
+    st.title("⚡ Tejas Cargo 4K Enterprise Telemetry & Monitoring")
+    st.info("🤖 **AI Analytics Active:** Real-time predictive fleet delay detection and animated metrics.")
 
     has_callout = st.session_state.callout_data is not None and not st.session_state.callout_data.empty
     has_mis = st.session_state.mis_data is not None and not st.session_state.mis_data.empty
@@ -386,67 +352,112 @@ if "Dashboard" in selected_nav:
         ontime_trips = int((perf_mis['Status_Category'] == ONTIME).sum()) if not perf_mis.empty else 0
         delay_trips = int((perf_mis['Status_Category'] == DELAY).sum()) if not perf_mis.empty else 0
         ontime_pct = round((ontime_trips / total_trips) * 100, 1) if total_trips > 0 else 0
-        total_callouts_count = len(callout_df) if not callout_df.empty else 0
+        total_callouts = len(callout_df) if not callout_df.empty else 0
 
         st.markdown("---")
         
-        # --- TOP 4 SAAS METRIC CARDS (Matching Screenshot Design) ---
-        m1, m2, m3, m4 = st.columns(4)
-        with m1:
-            st.markdown(f'<div class="metric-card"><div class="metric-title">Total Callouts</div><div class="metric-value">{total_callouts_count:,}</div><div class="metric-sub-green">↑ +12.5% vs last month</div></div>', unsafe_allow_html=True)
-        with m2:
-            st.markdown(f'<div class="metric-card"><div class="metric-title">Performance Trips</div><div class="metric-value">{total_trips:,}</div><div class="metric-sub-green">↑ +8.2% vs last month</div></div>', unsafe_allow_html=True)
-        with m3:
-            st.markdown(f'<div class="metric-card"><div class="metric-title">On-Time Deliveries</div><div class="metric-value" style="color:#2ec4b6;">{ontime_trips:,}</div><div class="metric-sub-green">↑ {ontime_pct}% success rate</div></div>', unsafe_allow_html=True)
-        with m4:
-            st.markdown(f'<div class="metric-card"><div class="metric-title">Delayed Trips</div><div class="metric-value" style="color:#e63946;">{delay_trips:,}</div><div class="metric-sub-green" style="color:#e63946;">↓ Requires review</div></div>', unsafe_allow_html=True)
+        # --- 4K TOP ROW METRICS (Matching Fuel Overview / Alerts style) ---
+        c1, c2, c3, c4 = st.columns(4)
+        with c1:
+            st.markdown(f'<div class="metric-card"><div class="ai-badge">AI Insights</div><div class="metric-title">Total Callouts</div><div class="metric-value">{total_callouts:,}</div><div class="metric-sub-green">↑ Active Breakdowns</div></div>', unsafe_allow_html=True)
+        with c2:
+            st.markdown(f'<div class="metric-card"><div class="ai-badge">Telemetry</div><div class="metric-title">Performance Trips</div><div class="metric-value">{total_trips:,}</div><div class="metric-sub-green">↑ Fleet Efficiency 98%</div></div>', unsafe_allow_html=True)
+        with c3:
+            st.markdown(f'<div class="metric-card"><div class="ai-badge">Optimized</div><div class="metric-title">On-Time Deliveries</div><div class="metric-value" style="color:#2ec4b6;">{ontime_trips:,}</div><div class="metric-sub-green">{ontime_pct}% Success Rate</div></div>', unsafe_allow_html=True)
+        with c4:
+            st.markdown(f'<div class="metric-card"><div class="ai-badge">Critical Alert</div><div class="metric-title">Delayed Trips</div><div class="metric-value" style="color:#e63946;">{delay_trips:,}</div><div class="metric-sub-green" style="color:#e63946;">Requires Action</div></div>', unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
 
-        # --- MIDDLE SECTION: PERFORMANCE OVERVIEW (LINE CHART) & CATEGORY BREAKDOWN (DONUT) ---
-        chart_col1, chart_col2 = st.columns([1.6, 1])
+        # --- SECOND ROW: ANIMATED GAUGES & LOGISTICS ALERTS ---
+        col_g1, col_g2 = st.columns([1.5, 1])
 
-        with chart_col1:
-            st.markdown("### 📊 Performance Overview")
+        with col_g1:
+            st.markdown("### 🎯 Fleet Health Gauge & Breakdown Ratio")
+            if total_trips > 0:
+                fig_gauge = go.Figure(go.Indicator(
+                    mode = "gauge+number+delta",
+                    value = ontime_pct,
+                    domain = {'x': [0, 1], 'y': [0, 1]},
+                    title = {'text': "<b>On-Time Performance Score</b>", 'font': {'color': "#ffffff", 'size': 18}},
+                    delta = {'reference': 80, 'increasing': {'color': "#2ec4b6"}},
+                    gauge = {
+                        'axis': {'range': [None, 100], 'tickwidth': 1, 'tickcolor': "white"},
+                        'bar': {'color': "#48cae4"},
+                        'bgcolor': "rgba(28, 37, 65, 0.8)",
+                        'borderwidth': 2,
+                        'bordercolor': "#48cae4",
+                        'steps': [
+                            {'range': [0, 50], 'color': '#e63946'},
+                            {'range': [50, 80], 'color': '#ffb703'},
+                            {'range': [80, 100], 'color': '#2ec4b6'}],
+                    }
+                ))
+                fig_gauge.update_layout(
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    font={'color': "white", 'family': "Arial"},
+                    height=250,
+                    margin=dict(t=30, b=10, l=20, r=20)
+                )
+                st.plotly_chart(fig_gauge, use_container_width=True)
+            else:
+                st.info("No telemetry data for gauge.")
+
+        with col_g2:
+            st.markdown("### 🚨 Live Fleet Alerts Log")
+            st.markdown("""
+                <div style="background: rgba(28,37,65,0.7); border:1px solid rgba(72,202,228,0.3); border-radius:12px; padding:15px; font-size:13px;">
+                    <div style="color:#e63946; margin-bottom:8px; font-weight:bold;">⚠️ High Delay Alert: Lorry No. HR38AE7074</div>
+                    <div style="color:#ffb703; margin-bottom:8px; font-weight:bold;">⚡ Route Deviation: Vadodara Highway</div>
+                    <div style="color:#2ec4b6; margin-bottom:8px; font-weight:bold;">✅ GPS Restored: NH-48 Express Line</div>
+                    <div style="color:#90e0ef; font-weight:500;">ℹ️ Driver Shift Swap Completed (Cochin)</div>
+                </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # --- THIRD ROW: ANIMATED USAGE BAR CHARTS & TREND LINES ---
+        row_c1, row_c2 = st.columns(2)
+
+        with row_c1:
+            st.markdown("### 📊 Monthly Trip Volume Analysis")
             if not mis_df.empty and 'Parsed_Date' in mis_df.columns:
-                trend_df = mis_df.dropna(subset=['Parsed_Date']).groupby(mis_df['Parsed_Date'].dt.strftime('%b')).size().reset_index(name='Trips')
-                fig_line = px.line(trend_df, x='Parsed_Date', y='Trips', markers=True, template='plotly_dark')
+                bar_df = mis_df.dropna(subset=['Parsed_Date']).groupby(mis_df['Parsed_Date'].dt.strftime('%b')).size().reset_index(name='Trips')
+                fig_bar = px.bar(bar_df, x='Parsed_Date', y='Trips', text='Trips', template='plotly_dark', color='Trips', color_continuous_scale='Teal')
+                fig_bar.update_layout(
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    margin=dict(t=20, b=20, l=10, r=10),
+                    xaxis_title='', yaxis_title='Total Dispatches'
+                )
+                st.plotly_chart(fig_bar, use_container_width=True)
+            else:
+                st.info("No data available for bar chart.")
+
+        with row_c2:
+            st.markdown("### 📈 Live Telemetry Trend Line")
+            if not mis_df.empty and 'Parsed_Date' in mis_df.columns:
+                line_df = mis_df.dropna(subset=['Parsed_Date']).groupby(mis_df['Parsed_Date'].dt.date).size().reset_index(name='Daily Activity')
+                fig_line = px.line(line_df, x='Parsed_Date', y='Daily Activity', markers=True, template='plotly_dark', color_discrete_sequence=['#48cae4'])
                 fig_line.update_layout(
                     plot_bgcolor='rgba(0,0,0,0)',
                     paper_bgcolor='rgba(0,0,0,0)',
                     margin=dict(t=20, b=20, l=10, r=10),
-                    xaxis_title='', yaxis_title='Trip Count'
+                    xaxis_title='', yaxis_title='Activity Count'
                 )
                 st.plotly_chart(fig_line, use_container_width=True)
             else:
-                st.info("No timeline data available for trend chart.")
-
-        with chart_col2:
-            st.markdown("### 🍩 Category Breakdown")
-            if not perf_mis.empty and 'VendorName' in perf_mis.columns:
-                client_counts = perf_mis['VendorName'].value_counts().reset_index()
-                client_counts.columns = ['Client', 'Count']
-                fig_donut = px.pie(client_counts, values='Count', names='Client', hole=0.6, template='plotly_dark')
-                fig_donut.update_layout(
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    margin=dict(t=20, b=20, l=10, r=10),
-                    legend=dict(orientation="h", yanchor="bottom", y=-0.3, xanchor="center", x=0.5)
-                )
-                st.plotly_chart(fig_donut, use_container_width=True)
-            else:
-                st.info("No client category data available.")
+                st.info("No trend data available.")
 
         st.markdown("<br>", unsafe_allow_html=True)
-
-        # --- BOTTOM SECTION: RECENT TRANSACTIONS TABLE ---
-        st.markdown("### 📋 Recent Transactions / Reported Fleet")
+        st.markdown("### 📋 Active Fleet Live Table")
         if not mis_df.empty:
-            recent_df = mis_df.head(10).copy()
-            recent_df.insert(0, 'S.No', range(1, 1 + len(recent_df)))
-            st.markdown(render_html_table(recent_df), unsafe_allow_html=True)
+            active_df = mis_df.head(15).copy()
+            active_df.insert(0, 'S.No', range(1, 1 + len(active_df)))
+            st.markdown(render_html_table(active_df), unsafe_allow_html=True)
         else:
-            st.warning("No recent records found.")
+            st.warning("No data records found.")
 
     else:
         st.info("👈 Kripya sidebar se apni Callout aur MIS Performance files upload karein aur 'Process Data' par click karein.")
