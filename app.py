@@ -452,4 +452,227 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
                         valid_indices.append(idx)
                     elif selected_remarks_filter == "Delay + Without Remarks (Empty)" and is_delayed and is_empty:
                         valid_indices.append(idx)
-                    elif selected_remarks_filter == "Delay + With Remarks" and is_delayed and not is_
+                    elif selected_remarks_filter == "Delay + With Remarks" and is_delayed and not is_empty:
+                        valid_indices.append(idx)
+                
+                filtered_report_df = filtered_report_df.loc[valid_indices].copy()
+
+        if selected_staff != "ALL" and staff_col:
+            filtered_report_df = filtered_report_df[filtered_report_df[staff_col].astype(str).str.strip() == selected_staff].copy()
+        if selected_client_report != "ALL" and client_col_name in filtered_report_df.columns:
+            filtered_report_df = filtered_report_df[filtered_report_df[client_col_name].astype(str).str.strip() == selected_client_report].copy()
+    else:
+        if staff_col:
+            filtered_report_df = filtered_report_df[filtered_report_df[staff_col].astype(str).str.strip() == staff_filter].copy()
+
+    if filtered_report_df.empty:
+        st.info(f"Selected filter ke liye koi Reported Vehicle data nahi mila.")
+        return
+
+    # EXACT USER SPECIFIED COLUMNS FILTERING
+    desired_cols = [
+        'Lorry No.', 'Veh.Type', 'From', 'Destination', 'Party', 'Desp. Date & Time',
+        'Hrs. Given', '1st Touching', '1st Touching Reporting Date & Time', 
+        '1st Touching Delivery Date & Time', '1st Touching Hrs.', '2nd Touching', 
+        '2nd Touching Reporting Date & Time', '2nd Touching Delivery Date & Time', 
+        '2nd Touching Hrs.', 'Final Touching Reporting Date & Time', 
+        'Total Touching Hrs.', 'Hrs. Taken with touching', 'Hrs. Taken without touching (Dly.)', 
+        'Late Hrs', 'Tracking Remark', 'Group Name', 'Controlling Staff Name', 'Foreman Name'
+    ]
+
+    actual_display_cols = []
+    for col in desired_cols:
+        matched_c = next((c for c in filtered_report_df.columns if c.lower().strip() == col.lower().strip()), None)
+        if matched_c:
+            actual_display_cols.append(matched_c)
+        else:
+            if col == 'Tracking Remark':
+                rem_alt = next((c for c in filtered_report_df.columns if 'remark' in c.lower()), None)
+                if rem_alt: actual_display_cols.append(rem_alt)
+            elif col == 'Party':
+                party_alt = vendor_column(filtered_report_df)
+                if party_alt: actual_display_cols.append(party_alt)
+
+    if not actual_display_cols:
+        actual_display_cols = [c for c in filtered_report_df.columns if not c.startswith('_')]
+
+    final_report_df = filtered_report_df[actual_display_cols].copy()
+    final_report_df.insert(0, 'S.No', range(1, 1 + len(final_report_df)))
+
+    st.markdown(render_html_table(final_report_df), unsafe_allow_html=True)
+
+    excel_bytes_reported = to_excel_bytes({'Reported_Vehicles': final_report_df})
+    st.download_button(
+        label=f"📥 Download Reported Vehicles Excel",
+        data=excel_bytes_reported,
+        file_name="Reported_Vehicles.xlsx",
+        mime=EXCEL_MIME,
+        type="primary",
+        key=f"download_reported_{unique_key}"
+    )
+
+    if staff_filter:
+        return
+
+    # ================= TOTAL TRIP CLOSED DATA (CLIENT-WISE SPEEDOMETER) =================
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("## 📊 Total Trip Closed Data (Client-wise Performance)")
+    
+    if client_col_name in reported_df.columns and late_col:
+        temp_stat_df = reported_df.copy()
+        temp_stat_df['Is_OnTime'] = temp_stat_df[late_col].apply(is_zero_late)
+        temp_stat_df['Is_Delay'] = ~temp_stat_df[late_col].apply(is_zero_late)
+        
+        client_groups = temp_stat_df.groupby(client_col_name).agg(
+            Total=('Is_OnTime', 'count'),
+            OnTime=('Is_OnTime', 'sum'),
+            Delay=('Is_Delay', 'sum')
+        ).reset_index()
+        
+        cols = st.columns(min(len(client_groups), 4) if not client_groups.empty else 1)
+        for idx, row in client_groups.iterrows():
+            c_name = row[client_col_name]
+            tot = int(row['Total'])
+            ot = int(row['OnTime'])
+            dl = int(row['Delay'])
+            rate = round((ot / tot) * 100, 1) if tot > 0 else 0.0
+            
+            with cols[idx % len(cols)]:
+                st.markdown(render_speedometer_html(c_name, rate, ot, dl, tot), unsafe_allow_html=True)
+    else:
+        st.info("Client-wise summary ke liye required columns nahi mile.")
+
+
+# ================= FILE PROCESSING =================
+def process_uploaded_files(uploaded_files):
+    callout_dfs = []
+    mis_dfs = []
+
+    for uploaded_file in uploaded_files:
+        try:
+            filename_lower = uploaded_file.name.lower()
+            temp_df = None
+
+            if filename_lower.endswith('.csv'):
+                for enc in ['utf-8', 'latin-1', 'cp1252']:
+                    try:
+                        uploaded_file.seek(0)
+                        temp_df = pd.read_csv(uploaded_file, low_memory=False, encoding=enc)
+                        break
+                    except Exception:
+                        continue
+            else:
+                temp_df = pd.read_excel(uploaded_file)
+
+            if temp_df is None or temp_df.empty:
+                continue
+
+            temp_df.columns = temp_df.columns.astype(str).str.strip()
+            
+            is_callout = ('callout' in filename_lower) or ('breakdown' in filename_lower)
+
+            if is_callout:
+                vendor_c = vendor_column(temp_df)
+                if vendor_c:
+                    temp_df['VendorName'] = temp_df[vendor_c].apply(lambda x: clean_party(x, keep_other=False))
+                else:
+                    temp_df['VendorName'] = "Other"
+                callout_dfs.append(temp_df)
+            else:
+                vendor_c = vendor_column(temp_df)
+                if vendor_c:
+                    temp_df['VendorName'] = temp_df[vendor_c].apply(lambda x: clean_party(x, keep_other=True))
+                else:
+                    temp_df['VendorName'] = "Other"
+
+                late_col = next((c for c in ['Late Hrs', 'Delay Hrs', 'Delay'] if c in temp_df.columns), None)
+                if late_col:
+                    temp_df['Status_Category'] = temp_df[late_col].apply(lambda v: DELAY if not is_zero_late(v) else ONTIME)
+                else:
+                    temp_df['Status_Category'] = ONTIME
+
+                mis_dfs.append(temp_df)
+
+        except Exception as e:
+            st.error(f"Error processing file {uploaded_file.name}: {e}")
+
+    combined_callout = pd.concat(callout_dfs, ignore_index=True) if callout_dfs else pd.DataFrame()
+    combined_mis = pd.concat(mis_dfs, ignore_index=True) if mis_dfs else pd.DataFrame()
+    return combined_callout, combined_mis
+
+
+# ================= MAIN APP =================
+def main():
+    st.title("🚀 Sales Manager Live Monitoring Dashboard")
+    st.markdown("Upload your MIS or Callout files to view real-time trip performance and statistics.")
+
+    if 'stored_mis_df' not in st.session_state:
+        st.session_state.stored_mis_df = pd.read_pickle(MIS_PATH) if os.path.exists(MIS_PATH) else pd.DataFrame()
+
+    if 'stored_callout_df' not in st.session_state:
+        st.session_state.stored_callout_df = pd.read_pickle(CALLOUT_PATH) if os.path.exists(CALLOUT_PATH) else pd.DataFrame()
+
+    st.sidebar.header("📁 Data Management")
+    uploaded_files = st.sidebar.file_uploader("Upload MIS / Callout Excel or CSV", type=["xlsx", "csv"], accept_multiple_files=True)
+
+    if uploaded_files:
+        if st.sidebar.button("💾 Process & Save Data", type="primary"):
+            c_df, m_df = process_uploaded_files(uploaded_files)
+            st.session_state.stored_callout_df = c_df
+            st.session_state.stored_mis_df = m_df
+            
+            c_df.to_pickle(CALLOUT_PATH)
+            m_df.to_pickle(MIS_PATH)
+            
+            st.sidebar.success("Data successfully loaded and saved permanently!")
+            st.rerun()
+
+    if st.sidebar.button("🗑️ Remove Data", type="secondary"):
+        st.session_state.stored_callout_df = pd.DataFrame()
+        st.session_state.stored_mis_df = pd.DataFrame()
+        
+        if os.path.exists(CALLOUT_PATH): os.remove(CALLOUT_PATH)
+        if os.path.exists(MIS_PATH): os.remove(MIS_PATH)
+            
+        st.sidebar.warning("Data has been removed.")
+        st.rerun()
+
+    st.sidebar.markdown("---")
+    st.sidebar.header("📊 Dashboard Navigation")
+    app_mode = st.sidebar.selectbox("Choose View", ["Main MIS Dashboard", "Callout Summary", "Staff Login Portal"])
+
+    callout_df = st.session_state.stored_callout_df
+    mis_df = st.session_state.stored_mis_df
+
+    if mis_df.empty and callout_df.empty:
+        st.info("Kripya sidebar mein files upload karke 'Process & Save Data' button par click karein.")
+        return
+
+    if app_mode == "Main MIS Dashboard":
+        st.header("📈 Main MIS Performance Dashboard")
+        if not mis_df.empty:
+            show_reported_vehicle_table(mis_df, unique_key="main_dashboard")
+        else:
+            st.warning("Koi MIS data available nahi hai.")
+
+    elif app_mode == "Callout Summary":
+        st.header("⚠️ Callout / Breakdown Summary")
+        if not callout_df.empty:
+            st.metric("TOTAL CALLOUT COUNT", len(callout_df))
+            st.markdown(render_html_table(callout_df), unsafe_allow_html=True)
+        else:
+            st.info("Koi Callout data available nahi hai.")
+
+    elif app_mode == "Staff Login Portal":
+        st.header("🔒 Staff Login Portal")
+        staff_col = next((c for c in mis_df.columns if 'controlling' in c.lower() or 'staff' in c.lower()), None)
+        if staff_col and not mis_df.empty:
+            staff_names = sorted([str(x).strip() for x in mis_df[staff_col].dropna().unique() if str(x).strip() != ""])
+            selected_staff = st.selectbox("Select Staff Member", staff_names)
+            if selected_staff:
+                show_reported_vehicle_table(mis_df, unique_key="staff_portal", staff_filter=selected_staff)
+        else:
+            st.warning("Controlling Staff column nahi mila ya MIS data khali hai.")
+
+if __name__ == '__main__':
+    main()
