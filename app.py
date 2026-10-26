@@ -524,7 +524,13 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
 
     from_col = next((c for c in reported_df.columns if c.lower().strip() in ['from', 'source', 'origin']), None)
     dest_col = next((c for c in reported_df.columns if c.lower().strip() in ['destination', 'to']), None)
-    group_col = next((c for c in reported_df.columns if 'group' in c.lower()), None)
+    
+    # --- YAHAN CHANGE KIYA HAI --- 
+    # Taaki sirf 'Group Name' hi pick ho, aur koi code wala column na aaye
+    group_col = next((c for c in reported_df.columns if str(c).strip().lower() == 'group name'), None)
+    if not group_col:
+        group_col = next((c for c in reported_df.columns if 'group' in str(c).lower()), None)
+    # -----------------------------
 
     if lorry_col and late_col:
         temp_veh_df = reported_df.copy()
