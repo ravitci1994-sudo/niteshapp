@@ -6,13 +6,19 @@ import io
 import os
 import html as html_lib
 
+try:
+    import google.generativeai as genai
+    HAS_GENAI = True
+except ImportError:
+    HAS_GENAI = False
+
 # 1. Page Configuration
 st.set_page_config(page_title="Sales Manager Live Monitoring Dashboard", layout="wide", initial_sidebar_state="expanded")
 
 # ================= CUSTOM CSS FOR ULTRA-PREMIUM LOOK =================
 st.markdown("""
     <style>
-    /* 1. Global Animated Background */
+    /* Global Animated Background */
     .main, [data-testid="stAppViewContainer"] {
         background: linear-gradient(135deg, #050b14 0%, #0a192f 50%, #050b14 100%);
         background-size: 200% 200%;
@@ -21,13 +27,13 @@ st.markdown("""
     }
     @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
 
-    /* 2. Custom Sleek Scrollbar */
+    /* Custom Sleek Scrollbar */
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-track { background: #050b14; }
     ::-webkit-scrollbar-thumb { background: rgba(72, 202, 228, 0.5); border-radius: 4px; }
     ::-webkit-scrollbar-thumb:hover { background: #f72585; }
 
-    /* 3. Glassmorphism Sidebar */
+    /* Glassmorphism Sidebar */
     [data-testid="stSidebar"] {
         background: rgba(10, 25, 47, 0.85) !important;
         backdrop-filter: blur(12px) !important;
@@ -35,7 +41,7 @@ st.markdown("""
         border-right: 1px solid rgba(72, 202, 228, 0.15);
     }
 
-    /* 4. Premium Animated Title */
+    /* Premium Animated Title */
     .premium-title {
         font-size: 2.8rem;
         font-weight: 900;
@@ -87,10 +93,9 @@ st.markdown("""
         box-shadow: 5px 0 15px rgba(0,0,0,0.5);
     }
     .ticker-text-wrapper {
-        padding-left: 160px; /* Space for the label */
+        padding-left: 160px; 
         display: inline-block;
         white-space: nowrap;
-        /* YAHAN SPEED SLOW KI GAYI HAI (45s instead of 20s) */
         animation: marquee 45s linear infinite; 
     }
     .ticker-item {
@@ -105,7 +110,7 @@ st.markdown("""
         100% { transform: translateX(-100%); }
     }
 
-    /* 5. Streamlit Widget Enhancements */
+    /* Streamlit Widget Enhancements */
     .stSelectbox div[data-baseweb="select"] > div {
         background-color: rgba(28, 37, 65, 0.6) !important;
         border: 1px solid rgba(72, 202, 228, 0.3) !important;
@@ -118,7 +123,7 @@ st.markdown("""
         box-shadow: 0 0 10px rgba(247, 37, 133, 0.2);
     }
     
-    /* 6. Glowing Buttons */
+    /* Glowing Buttons */
     .stButton > button {
         background: linear-gradient(90deg, #f72585, #7209b7) !important;
         border: none !important;
@@ -133,31 +138,22 @@ st.markdown("""
         box-shadow: 0 6px 25px rgba(247, 37, 133, 0.6) !important;
     }
 
-    /* 7. Built-in Smart Insights Panel */
-    .smart-panel {
-        background: rgba(17, 34, 64, 0.7);
+    /* AI Chat / Suggestions Container */
+    .ai-response-box {
+        background: rgba(17, 34, 64, 0.85);
         backdrop-filter: blur(10px);
-        border-left: 4px solid #48cae4;
-        border-radius: 12px;
-        padding: 25px 30px;
-        margin: 15px 0 30px 0;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-        animation: slideDown 0.8s ease-out;
-        position: relative;
-        overflow: hidden;
+        border-left: 4px solid #f72585;
+        border-radius: 10px;
+        padding: 20px;
+        margin-top: 15px;
+        color: #e6f1ff;
+        font-size: 15px;
+        line-height: 1.6;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+        animation: fadeUp 0.6s ease-out both;
     }
-    .smart-title {
-        color: #48cae4; font-size: 20px; font-weight: 900; margin-bottom: 20px;
-        letter-spacing: 1.5px; text-transform: uppercase; display: flex; align-items: center; gap: 10px;
-    }
-    .smart-bullet {
-        color: #e6f1ff; font-size: 15px; margin-bottom: 14px; line-height: 1.7;
-        display: flex; align-items: flex-start; gap: 12px;
-        background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; border: 1px solid rgba(72,202,228,0.15);
-    }
-    .smart-bullet strong { color: #f72585; }
 
-    /* 8. Modern Tables */
+    /* Modern Tables */
     .custom-table-container {
         overflow-x: auto; max-height: 480px;
         border: 1px solid rgba(72, 202, 228, 0.2);
@@ -249,7 +245,7 @@ def to_excel_bytes(sheets):
         for name, frame in sheets.items(): frame.to_excel(writer, index=False, sheet_name=name)
     return buffer_excel.getvalue()
 
-# ================= NEWS TICKER COMPONENT (UPDATED CONTENT) =================
+# ================= NEWS TICKER COMPONENT =================
 def render_news_ticker(df):
     if df.empty:
         ticker_text = "🟢 SYSTEM READY... WAITING FOR DATA UPLOAD... PLEASE UPLOAD MIS FILE FROM SIDEBAR..."
@@ -263,30 +259,22 @@ def render_news_ticker(df):
             delayed = len(df[~df[late_col].apply(is_zero_late)])
             on_time_pct = round(((total - delayed) / total) * 100, 1) if total > 0 else 0
             
-            # Staff Data Extract
             staff_text = ""
             if staff_col:
                 top_staff = df[staff_col].value_counts()
                 if not top_staff.empty:
-                    staff_name = top_staff.index[0]
-                    staff_trips = top_staff.iloc[0]
-                    staff_text = f" | 👨‍💼 TOP STAFF: {staff_name} ({staff_trips} Trips)"
+                    staff_text = f" | 👨‍💼 TOP STAFF: {top_staff.index[0]} ({top_staff.iloc[0]} Trips)"
             
-            # Client Data Extract
             client_text = ""
             if client_col:
                 top_client = df[client_col].value_counts()
                 if not top_client.empty:
-                    client_name = top_client.index[0]
-                    client_trips = top_client.iloc[0]
-                    client_text = f" | 🏢 TOP CLIENT: {client_name} ({client_trips} Trips)"
+                    client_text = f" | 🏢 TOP CLIENT: {top_client.index[0]} ({top_client.iloc[0]} Trips)"
             
-            # Combine everything in ticker
             ticker_text = f"🚀 LIVE PERFORMANCE: Total Trips: {total} | ✅ On-Time: {on_time_pct}% | ⚠️ Delayed: {delayed}{staff_text}{client_text} | ⚡ KEEP MONITORING DASHBOARD FOR REAL-TIME UPDATES"
         else:
             ticker_text = f"🚀 LIVE UPDATE: Total Active Trips: {len(df)} | 🟢 ALL SYSTEMS NORMAL "
 
-    # Repeat text to make it continuous seamless scroll
     full_text = f"<span class='ticker-item'>{ticker_text}</span>" * 4
     
     html_out = f"""<div class="news-ticker-container">
@@ -296,50 +284,80 @@ def render_news_ticker(df):
     st.markdown(html_out, unsafe_allow_html=True)
 
 
-# ================= BUILT-IN SMART INSIGHTS ENGINE =================
-def render_smart_insights(df, late_col, client_col):
-    if df.empty or not late_col: return
+# ================= 🔥 NEW: REAL-TIME AI COPILOT (CHAT & SUGGESTIONS) 🔥 =================
+def render_realtime_ai_copilot(df, late_col, client_col):
+    st.markdown("<br><h3 style='color:#f72585; font-size:22px; margin-bottom:10px;'>🤖 Interactive AI Copilot & Strategy Engine</h3>", unsafe_allow_html=True)
+    st.markdown("<p style='color:#8892b0; font-size:14px;'>Get actionable suggestions and chat with your logistics data in real-time.</p>", unsafe_allow_html=True)
+
+    api_key = st.session_state.get('gemini_api_key', '')
+
+    if not HAS_GENAI:
+        st.error("❌ Required AI Library Missing. Please run `pip install google-generativeai` in your terminal.")
+        return
     
-    total_vehicles = len(df)
-    delayed_vehicles = df[~df[late_col].apply(is_zero_late)]
-    delay_count = len(delayed_vehicles)
-    delay_percentage = round((delay_count / total_vehicles) * 100, 1) if total_vehicles > 0 else 0
-    
+    if not api_key:
+        st.warning("⚠️ Real-Time AI requires a Gemini API Key. Please enter it in the sidebar (🔑 AI Configuration).")
+        return
+
+    # Data Summary Prep for AI Context
+    total = len(df)
+    delayed = len(df[~df[late_col].apply(is_zero_late)]) if late_col else 0
     from_col = next((c for c in df.columns if c.lower().strip() in ['from', 'source', 'origin']), None)
     dest_col = next((c for c in df.columns if c.lower().strip() in ['destination', 'to']), None)
     
-    top_route_str = "No specific route data available."
-    if from_col and dest_col and delay_count > 0:
-        delayed_routes = delayed_vehicles[from_col].astype(str) + " ➔ " + delayed_vehicles[dest_col].astype(str)
-        if not delayed_routes.empty:
-            top_route = delayed_routes.value_counts().index[0]
-            top_route_count = delayed_routes.value_counts().iloc[0]
-            top_route_str = f"Route <strong>{top_route}</strong> is facing maximum bottlenecks with <strong>{top_route_count}</strong> delayed vehicles."
+    route_context = "No route data"
+    if from_col and dest_col and delayed > 0:
+        del_df = df[~df[late_col].apply(is_zero_late)]
+        routes = del_df[from_col].astype(str) + " -> " + del_df[dest_col].astype(str)
+        if not routes.empty:
+            route_context = f"Most delayed route is {routes.value_counts().index[0]} with {routes.value_counts().iloc[0]} delays."
 
-    top_client_str = "No specific client data available."
-    if client_col and delay_count > 0:
-        if not delayed_vehicles[client_col].empty:
-            top_client = delayed_vehicles[client_col].value_counts().index[0]
-            top_client_count = delayed_vehicles[client_col].value_counts().iloc[0]
-            top_client_str = f"Client <strong>{top_client}</strong> is heavily impacted, experiencing <strong>{top_client_count}</strong> delays."
+    client_context = "No client data"
+    if client_col and delayed > 0:
+        del_df = df[~df[late_col].apply(is_zero_late)]
+        if not del_df[client_col].empty:
+            client_context = f"Client {del_df[client_col].value_counts().index[0]} is facing {del_df[client_col].value_counts().iloc[0]} delays."
 
-    html_out = f"""<div class="smart-panel">
-<div class="smart-title">📊 Smart Auto-Insights Engine</div>
-<div style="color:#8892b0; font-size:13.5px; margin-bottom:15px;">Live analysis generated directly from current filters without external APIs.</div>
-<div class="smart-bullet">
-<span style="font-size:18px;">🚦</span>
-<span><strong>Performance Overview:</strong> Out of {total_vehicles} total tracked trips, <strong>{delay_count}</strong> are currently running late. This represents a delay rate of <strong>{delay_percentage}%</strong>.</span>
-</div>
-<div class="smart-bullet">
-<span style="font-size:18px;">🛣️</span>
-<span><strong>Route Alert:</strong> {top_route_str}</span>
-</div>
-<div class="smart-bullet">
-<span style="font-size:18px;">🏢</span>
-<span><strong>Vendor Impact:</strong> {top_client_str}</span>
-</div>
-</div>"""
-    st.markdown(html_out, unsafe_allow_html=True)
+    data_context = f"Currently tracking {total} trips. {delayed} trips are delayed. {route_context}. {client_context}."
+
+    # Tabs for interaction
+    tab1, tab2 = st.tabs(["💡 Generate Actionable Strategy", "💬 Chat with Live Data"])
+
+    # TAB 1: AI Suggestions
+    with tab1:
+        if st.button("Generate Strategy for Current Data"):
+            with st.spinner("Analyzing current bottlenecks and generating strategy..."):
+                try:
+                    genai.configure(api_key=api_key)
+                    model = genai.GenerativeModel('gemini-1.5-flash')
+                    prompt = f"""
+                    You are an expert Logistics Operations Manager. Look at this real-time data snapshot and provide 3 actionable, professional suggestions to fix the issues.
+                    Data: {data_context}
+                    
+                    Format your response with proper spacing and emojis. Keep it directly actionable.
+                    """
+                    response = model.generate_content(prompt)
+                    st.markdown(f'<div class="ai-response-box">{response.text}</div>', unsafe_allow_html=True)
+                except Exception as e:
+                    st.error(f"API Error: Ensure your API key is correct. Details: {e}")
+
+    # TAB 2: AI Chat
+    with tab2:
+        user_question = st.chat_input("Ask AI a question about your logistics operations...")
+        if user_question:
+            st.markdown(f"**You asked:** {user_question}")
+            with st.spinner("AI is thinking..."):
+                try:
+                    genai.configure(api_key=api_key)
+                    model = genai.GenerativeModel('gemini-1.5-flash')
+                    chat_prompt = f"""
+                    Context: You are a Logistics AI Assistant. Based on this current data ({data_context}), answer the user's question.
+                    User Question: {user_question}
+                    """
+                    response = model.generate_content(chat_prompt)
+                    st.markdown(f'<div class="ai-response-box">🤖 <b>AI Reply:</b><br><br>{response.text}</div>', unsafe_allow_html=True)
+                except Exception as e:
+                    st.error(f"API Error: {e}")
 
 
 # ================= REPORTED VEHICLE TABLE & REPORTS =================
@@ -454,8 +472,8 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
         st.info("No data found for the selected filters.")
         return
 
-    # ================= CALL SMART BUILT-IN INSIGHTS =================
-    render_smart_insights(filtered_report_df, late_col, client_col_name)
+    # ================= CALL REAL-TIME AI COPILOT =================
+    render_realtime_ai_copilot(filtered_report_df, late_col, client_col_name)
 
     # EXACT USER SPECIFIED COLUMNS FILTERING
     desired_cols = [
@@ -576,16 +594,21 @@ def process_uploaded_files(uploaded_files):
 
 # ================= MAIN APP =================
 def main():
-    # 🌟 ULTRA PREMIUM ANIMATED HEADING 🌟
     st.markdown("<h1 class='premium-title'>🚀 Sales Manager Live Monitoring Dashboard</h1>", unsafe_allow_html=True)
 
     if 'stored_mis_df' not in st.session_state: st.session_state.stored_mis_df = pd.read_pickle(MIS_PATH) if os.path.exists(MIS_PATH) else pd.DataFrame()
     if 'stored_callout_df' not in st.session_state: st.session_state.stored_callout_df = pd.read_pickle(CALLOUT_PATH) if os.path.exists(CALLOUT_PATH) else pd.DataFrame()
 
-    # 🔥 CALLING THE NEWS TICKER FUNCTION (RIGHT BELOW TITLE) 🔥
+    # 🔥 CALLING THE SLOW NEWS TICKER
     render_news_ticker(st.session_state.stored_mis_df)
 
-    st.sidebar.markdown("<h2 style='color:#64ffda; font-size:18px; margin-top:10px;'>📁 Data Management</h2>", unsafe_allow_html=True)
+    # SIDEBAR: API KEY INPUT FOR REAL AI
+    st.sidebar.markdown("<h2 style='color:#f72585; font-size:18px;'>🔑 AI Configuration</h2>", unsafe_allow_html=True)
+    api_key_input = st.sidebar.text_input("Enter Gemini API Key", type="password", help="Required for AI Suggestions and Chat")
+    if api_key_input: 
+        st.session_state['gemini_api_key'] = api_key_input
+
+    st.sidebar.markdown("<h2 style='color:#64ffda; font-size:18px; margin-top:20px;'>📁 Data Management</h2>", unsafe_allow_html=True)
     uploaded_files = st.sidebar.file_uploader("Upload MIS/Callout (Excel/CSV)", type=["xlsx", "csv"], accept_multiple_files=True)
 
     if uploaded_files and st.sidebar.button("💾 Process & Save Data", type="primary"):
