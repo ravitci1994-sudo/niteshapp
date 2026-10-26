@@ -216,6 +216,48 @@ def show_in_transit_table(df, unique_key="", locked_staff=None):
     st.download_button(label="📥 Download In-Transit Excel", data=excel_bytes, file_name="In_Transit_Vehicles.xlsx", mime=EXCEL_MIME, type="primary", key=f"dl_it_{unique_key}")
 
 
+# ================= CLIENT SUMMARY VIEW =================
+def show_client_summary_view(df, unique_key="", locked_staff=None):
+    st.markdown("<br><h2 style='color:#f72585;'>🏢 Client-wise Performance Summary</h2>", unsafe_allow_html=True)
+    
+    client_col_name = vendor_column(df) or 'VendorName'
+    late_col = next((c for c in ['Late Hrs', 'Delay Hrs', 'Delay'] if c in df.columns), None)
+    staff_col = next((c for c in df.columns if 'controlling' in c.lower() or 'staff' in c.lower()), None)
+    
+    view_df = df.copy()
+    if locked_staff and staff_col:
+        view_df = view_df[view_df[staff_col].astype(str).str.strip().str.upper() == locked_staff.upper()]
+        st.info(f"🔒 Restricted View: Showing client summary for **{locked_staff}** only.")
+        
+    if client_col_name and client_col_name in view_df.columns and late_col:
+        view_df['Is_OnTime'] = view_df[late_col].apply(is_zero_late)
+        view_df['Is_Delay'] = ~view_df[late_col].apply(is_zero_late)
+        
+        client_summary = view_df.groupby(client_col_name).agg(
+            Total=('Is_OnTime', 'count'),
+            OnTime=('Is_OnTime', 'sum'),
+            Delay=('Is_Delay', 'sum')
+        ).reset_index()
+        
+        client_summary['On-Time %'] = client_summary.apply(
+            lambda r: f"{round((r['OnTime'] / r['Total']) * 100, 1)}%" if r['Total'] > 0 else "0.0%", axis=1
+        )
+        client_summary = client_summary.rename(columns={
+            client_col_name: 'Client Name',
+            'Total': 'Total Trips',
+            'OnTime': 'On-Time Trips',
+            'Delay': 'Delay Trips'
+        }).sort_values(by='Total Trips', ascending=False)
+        
+        client_summary.insert(0, 'S.No', range(1, 1 + len(client_summary)))
+        st.markdown(render_html_table(client_summary), unsafe_allow_html=True)
+        
+        excel_client = to_excel_bytes({'Client_Performance': client_summary})
+        st.download_button(label="📥 Download Client Performance Excel", data=excel_client, file_name="Client_Performance_Summary.xlsx", mime=EXCEL_MIME, type="primary", key=f"dl_client_summary_{unique_key}")
+    else:
+        st.info("Client performance data ke liye required columns nahi mile.")
+
+
 # ================= MAIN MIS TABLE & PERFORMANCE REPORTS =================
 def show_reported_vehicle_table(df, unique_key="", locked_staff=None):
     final_rep_col = next((c for c in ['Final Touching Reporting Date & Time', 'Reporting Date & Time', 'Reporting Date', 'Desp. Date & Time'] if c in df.columns), None)
@@ -264,7 +306,7 @@ def show_reported_vehicle_table(df, unique_key="", locked_staff=None):
 
     late_col = next((c for c in ['Late Hrs', 'Delay Hrs', 'Delay'] if c in reported_df.columns), None)
 
-    # 2. CLIENT-WISE PERFORMANCE REPORT (NICHE SHOW HOGA)
+    # 2. CLIENT-WISE PERFORMANCE REPORT
     st.markdown("<br><h3 style='color:#f72585; font-size:22px; margin-bottom:15px;'>🏢 Client-wise Performance Report</h3>", unsafe_allow_html=True)
     if client_col_name and client_col_name in reported_df.columns and late_col:
         client_df = reported_df.copy()
@@ -295,7 +337,7 @@ def show_reported_vehicle_table(df, unique_key="", locked_staff=None):
     else:
         st.info("Client performance data available nahi hai.")
 
-    # 3. VEHICLE-WISE PERFORMANCE REPORT (USKE NICHE SHOW HOGA)
+    # 3. VEHICLE-WISE PERFORMANCE REPORT
     st.markdown("<br><h3 style='color:#48cae4; font-size:22px; margin-bottom:15px;'>🚛 Vehicle-wise Performance Report</h3>", unsafe_allow_html=True)
     
     lorry_col = next((c for c in reported_df.columns if c.lower().strip() in ['lorry no.', 'lorry no', 'vehicle no', 'vehicle', 'truck']), None)
@@ -450,7 +492,13 @@ def main():
     st.sidebar.markdown("---")
     st.sidebar.markdown("<h2 style='color:#64ffda; font-size:18px;'>📊 Application Views</h2>", unsafe_allow_html=True)
     
-    app_mode = st.sidebar.selectbox("Navigate To:", ["Main MIS Dashboard", "In-Transit Vehicles", "Callout Summary"])
+    # 🔥 YAHAN "Client Summary" ADD KAR DIYA GAYA HAI 🔥
+    app_mode = st.sidebar.selectbox("Navigate To:", [
+        "Main MIS Dashboard", 
+        "In-Transit Vehicles", 
+        "Client Summary", 
+        "Callout Summary"
+    ])
 
     callout_df = st.session_state.stored_callout_df
     mis_df = st.session_state.stored_mis_df
@@ -470,6 +518,12 @@ def main():
     elif app_mode == "In-Transit Vehicles":
         if not mis_df.empty:
             show_in_transit_table(mis_df, unique_key="intransit", locked_staff=current_locked_staff)
+        else:
+            st.warning("Koi MIS data available nahi hai.")
+
+    elif app_mode == "Client Summary":
+        if not mis_df.empty:
+            show_client_summary_view(mis_df, unique_key="client_view", locked_staff=current_locked_staff)
         else:
             st.warning("Koi MIS data available nahi hai.")
 
