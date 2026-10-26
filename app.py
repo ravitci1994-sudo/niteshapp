@@ -518,7 +518,10 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("## 🚛 Vehicle-wise Trip Closed Performance")
 
-    lorry_col = next((c for c in reported_df.columns if any(k in c.lower() for k in ['lorry', 'vehicle', 'truck'])) , None)
+    lorry_col = next((c for c in reported_df.columns if c.lower().strip() in ['lorry no.', 'lorry no', 'vehicle no', 'vehicle', 'truck']), None)
+    if not lorry_col:
+        lorry_col = next((c for c in reported_df.columns if any(k in c.lower() for k in ['lorry', 'vehicle', 'truck'])) , None)
+
     from_col = next((c for c in reported_df.columns if c.lower().strip() in ['from', 'source', 'origin']), None)
     dest_col = next((c for c in reported_df.columns if c.lower().strip() in ['destination', 'to']), None)
 
@@ -555,7 +558,7 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
         else:
             veh_df['Route'] = "N/A"
 
-        # Group by both Lorry No and Route so individual routes for the same vehicle show up clearly
+        # Group by Lorry No (Vehicle No) and Route
         veh_groups = veh_df.groupby([lorry_col, 'Route']).agg(
             Total=('Is_OnTime', 'count'),
             OnTime=('Is_OnTime', 'sum'),
@@ -567,7 +570,7 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
             lambda r: f"{round((r['OnTime'] / r['Total']) * 100, 1)}%" if r['Total'] > 0 else "0.0%", axis=1
         )
         veh_summary_df = veh_summary_df.rename(columns={
-            lorry_col: 'Lorry No. / Vehicle',
+            lorry_col: 'Vehicle No.',
             'Route': 'Route (From ➔ Destination)',
             'Total': 'Total Trips',
             'OnTime': 'On-Time Trips',
