@@ -274,7 +274,35 @@ def show_reported_vehicle_table(df, unique_key="", locked_staff=None):
     if not final_rep_col: final_rep_col = next((c for c in df.columns if 'report' in c.lower() or 'desp' in c.lower() or 'date' in c.lower()), None)
 
     reported_df = df[~df[final_rep_col].apply(is_blank)].copy() if final_rep_col else df.copy()
-    
+
+    if final_rep_col:
+        parsed_rep_dt = pd.to_datetime(reported_df[final_rep_col], errors='coerce', dayfirst=True)
+        reported_df['_Rep_Date_Obj'] = parsed_rep_dt.dt.date
+        reported_df['_Rep_Date_Str'] = parsed_rep_dt.dt.strftime('%d-%m-%Y')
+        reported_df['_Month_Str'] = parsed_rep_dt.dt.strftime('%B %Y')
+    else:
+        reported_df['_Rep_Date_Obj'] = None
+        reported_df['_Rep_Date_Str'] = "ALL"
+        reported_df['_Month_Str'] = "ALL"
+
+    current_dt = datetime.now().date()
+    def get_relative_week(row_date):
+        if pd.isna(row_date): return None
+        diff = (current_dt - row_date).days
+        if diff < 0: return "Current / Future"
+        elif diff <= 7: return "Last 1 Week"
+        elif diff <= 14: return "Last 2 Weeks"
+        elif diff <= 21: return "Last 3 Weeks"
+        elif diff <= 28: return "Last 4 Weeks"
+        return None
+
+    reported_df['_Rel_Week'] = reported_df['_Rep_Date_Obj'].apply(get_relative_week)
+
+    valid_dates = reported_df[reported_df['_Rep_Date_Obj'].notna()].drop_duplicates(subset=['_Rep_Date_Str']).sort_values('_Rep_Date_Obj', ascending=False)
+    date_options = ["ALL"] + valid_dates['_Rep_Date_Str'].tolist()
+    valid_months = reported_df[reported_df['_Rep_Date_Obj'].notna()].drop_duplicates(subset=['_Month_Str']).sort_values('_Rep_Date_Obj', ascending=False)
+    month_options = ["ALL"] + valid_months['_Month_Str'].tolist()
+
     staff_col = next((c for c in reported_df.columns if 'controlling' in c.lower() or 'staff' in c.lower()), None)
     client_col_name = vendor_column(reported_df) or 'VendorName'
 
@@ -288,30 +316,99 @@ def show_reported_vehicle_table(df, unique_key="", locked_staff=None):
 
     if not locked_staff:
         st.markdown("<h3 style='color:#48cae4; font-size:18px;'>🔍 Live Data Filters</h3>", unsafe_allow_html=True)
-        f_col1, f_col2, f_col3, f_col4, f_col5 = st.columns(5)
-        with f_col1: delay_filter = st.selectbox("🚨 Status:", ["ALL Reported Vehicles", "Only Delay", "Only On-Time"], key=f"s_{unique_key}")
-        with f_col2: 
+        f_col1, f_col2, f_col3, f_col4, f_col5, f_col6, f_col7 = st.columns(7)
+        with f_col1: selected_date = st.selectbox("📅 Date:", date_options, index=0, key=f"d_{unique_key}")
+        with f_col2: selected_month = st.selectbox("🗓️ Month:", month_options, index=0, key=f"m_{unique_key}")
+        with f_col3: delay_filter = st.selectbox("🚨 Status:", ["ALL Reported Vehicles", "Only Delay", "Only On-Time"], index=0, key=f"s_{unique_key}")
+        with f_col4: 
             staff_list = ["ALL"] + sorted([str(x).strip() for x in reported_df[staff_col].dropna().unique() if str(x).strip() != ""]) if staff_col else ["ALL"]
-            selected_staff = st.selectbox("👨‍💼 Staff:", staff_list, key=f"st_{unique_key}")
-        with f_col3: 
+            selected_staff = st.selectbox("👨‍💼 Staff:", staff_list, index=0, key=f"st_{unique_key}")
+        with f_col5: 
             client_list = ["ALL"] + sorted([str(x).strip() for x in reported_df[client_col_name].dropna().unique() if str(x).strip() != ""]) if client_col_name in reported_df.columns else ["ALL"]
-            selected_client = st.selectbox("🏢 Client:", client_list, key=f"c_{unique_key}")
-        with f_col4: selected_delay_hours = st.selectbox("⏱️ Delay Hrs:", ["ALL", "Delay < 10 mins", "Delay < 30 mins"], key=f"dh_{unique_key}")
-        with f_col5: selected_remarks = st.selectbox("📝 Remarks:", ["ALL", "With Remarks", "Without Remarks (Empty)"], key=f"r_{unique_key}")
+            selected_client = st.selectbox("🏢 Client:", client_list, index=0, key=f"c_{unique_key}")
+        with f_col6: selected_delay_hours = st.selectbox("⏱️ Delay Hrs:", ["ALL", "Delay < 10 mins", "Delay < 30 mins"], index=0, key=f"dh_{unique_key}")
+        with f_col7: selected_remarks = st.selectbox("📝 Remarks:", ["ALL", "With Remarks", "Without Remarks (Empty)"], index=0, key=f"r_{unique_key}")
 
-        late_col = next((c for c in ['Late Hrs', 'Delay Hrs', 'Delay'] if c in reported_df.columns), None)
-        if selected_staff != "ALL" and staff_col: reported_df = reported_df[reported_df[staff_col].astype(str).str.strip() == selected_staff]
-        if selected_client != "ALL" and client_col_name in reported_df.columns: reported_df = reported_df[reported_df[client_col_name].astype(str).str.strip() == selected_client]
-        if delay_filter == "Only Delay" and late_col: reported_df = reported_df[~reported_df[late_col].apply(is_zero_late)]
-        elif delay_filter == "Only On-Time" and late_col: reported_df = reported_df[reported_df[late_col].apply(is_zero_late)]
+        strict_week_options = ["Last 1 Week", "Last 2 Weeks", "Last 3 Weeks", "Last 4 Weeks"]
+        available_weeks = [w for w in strict_week_options if w in reported_df['_Rel_Week'].unique()]
+        selected_weeks = []
+        if available_weeks:
+            st.markdown("<div style='font-size: 13px; color: #8892b0; margin-bottom: 5px; margin-top:10px;'>Filter by Week:</div>", unsafe_allow_html=True)
+            chk_cols = st.columns(len(strict_week_options))
+            for i, wk in enumerate(strict_week_options):
+                with chk_cols[i]:
+                    if st.checkbox(wk, key=f"w_{unique_key}_{wk}"): selected_weeks.append(wk)
 
-    final_report_df = reported_df.copy()
+    # Yeh filtered data sirf upar wale main table ke liye use hoga
+    filtered_report_df = reported_df.copy()
+    late_col = next((c for c in ['Late Hrs', 'Delay Hrs', 'Delay'] if c in filtered_report_df.columns), None)
+    remark_col = next((c for c in ['Tracking Remark', 'Remark', 'Remarks'] if c in filtered_report_df.columns), None)
+
+    if not locked_staff:
+        if selected_date != "ALL": filtered_report_df = filtered_report_df[filtered_report_df['_Rep_Date_Str'] == selected_date]
+        if selected_month != "ALL": filtered_report_df = filtered_report_df[filtered_report_df['_Month_Str'] == selected_month]
+        if selected_weeks: filtered_report_df = filtered_report_df[filtered_report_df['_Rel_Week'].isin(selected_weeks)]
+        
+        if late_col:
+            if delay_filter == "Only Delay": filtered_report_df = filtered_report_df[~filtered_report_df[late_col].apply(is_zero_late)]
+            elif delay_filter == "Only On-Time": filtered_report_df = filtered_report_df[filtered_report_df[late_col].apply(is_zero_late)]
+
+            if selected_delay_hours != "ALL":
+                def check_delay(val):
+                    mins = get_delay_minutes(val)
+                    if mins <= 0: return False
+                    if "10" in selected_delay_hours: return mins < 10
+                    if "30" in selected_delay_hours: return mins < 30
+                    return False
+                filtered_report_df = filtered_report_df[filtered_report_df[late_col].apply(check_delay)]
+
+        if selected_remarks != "ALL" and remark_col:
+            valid_indices = []
+            for idx, row in filtered_report_df.iterrows():
+                is_empty = is_blank(row.get(remark_col, None))
+                is_delayed = not is_zero_late(row.get(late_col, 0)) if late_col else True
+                if selected_remarks == "With Remarks" and not is_empty: valid_indices.append(idx)
+                elif selected_remarks == "Without Remarks (Empty)" and is_empty: valid_indices.append(idx)
+            filtered_report_df = filtered_report_df.loc[valid_indices]
+
+        if selected_staff != "ALL" and staff_col: filtered_report_df = filtered_report_df[filtered_report_df[staff_col].astype(str).str.strip() == selected_staff]
+        if selected_client != "ALL" and client_col_name in filtered_report_df.columns: filtered_report_df = filtered_report_df[filtered_report_df[client_col_name].astype(str).str.strip() == selected_client]
+
+    if filtered_report_df.empty:
+        st.info("No data found for the selected filters.")
+        return
+
+    desired_cols = [
+        'Lorry No.', 'Veh.Type', 'From', 'Destination', 'Party', 'Desp. Date & Time',
+        'Hrs. Given', '1st Touching', '1st Touching Reporting Date & Time', 
+        '1st Touching Delivery Date & Time', '1st Touching Hrs.', '2nd Touching', 
+        '2nd Touching Reporting Date & Time', '2nd Touching Delivery Date & Time', 
+        '2nd Touching Hrs.', 'Final Touching Reporting Date & Time', 
+        'Total Touching Hrs.', 'Hrs. Taken with touching', 'Hrs. Taken without touching (Dly.)', 
+        'Late Hrs', 'Tracking Remark', 'Group Name', 'Controlling Staff Name', 'Foreman Name'
+    ]
+
+    actual_display_cols = []
+    for col in desired_cols:
+        matched_c = next((c for c in filtered_report_df.columns if c.lower().strip() == col.lower().strip()), None)
+        if matched_c: actual_display_cols.append(matched_c)
+        else:
+            if col == 'Tracking Remark': 
+                rem_alt = next((c for c in filtered_report_df.columns if 'remark' in c.lower()), None)
+                if rem_alt: actual_display_cols.append(rem_alt)
+            elif col == 'Party':
+                party_alt = vendor_column(filtered_report_df)
+                if party_alt: actual_display_cols.append(party_alt)
+
+    if not actual_display_cols: actual_display_cols = [c for c in filtered_report_df.columns if not c.startswith('_')]
+
+    final_report_df = filtered_report_df[actual_display_cols].copy()
     final_report_df.insert(0, 'S.No', range(1, 1 + len(final_report_df)))
 
     # 1. LIVE DATA TABLE
     st.markdown(render_html_table(final_report_df), unsafe_allow_html=True)
     
-    # 🔥 BOTH DOWNLOAD EXCEL AND SEND MAIL BUTTONS SIDE BY SIDE 🔥
+    # DOWNLOAD & SEND MAIL BUTTONS
     col_b1, col_b2 = st.columns(2)
     with col_b1:
         excel_bytes = to_excel_bytes({'Reported_Vehicles': final_report_df})
@@ -332,232 +429,4 @@ def show_reported_vehicle_table(df, unique_key="", locked_staff=None):
 
     late_col = next((c for c in ['Late Hrs', 'Delay Hrs', 'Delay'] if c in reported_df.columns), None)
 
-    # 2. CLIENT-WISE PERFORMANCE REPORT
-    st.markdown("<br><h3 style='color:#f72585; font-size:22px; margin-bottom:15px;'>🏢 Client-wise Performance Report</h3>", unsafe_allow_html=True)
-    if client_col_name and client_col_name in reported_df.columns and late_col:
-        client_df = reported_df.copy()
-        client_df['Is_OnTime'] = client_df[late_col].apply(is_zero_late)
-        client_df['Is_Delay'] = ~client_df[late_col].apply(is_zero_late)
-        
-        client_summary = client_df.groupby(client_col_name).agg(
-            Total=('Is_OnTime', 'count'),
-            OnTime=('Is_OnTime', 'sum'),
-            Delay=('Is_Delay', 'sum')
-        ).reset_index()
-        
-        client_summary['On-Time %'] = client_summary.apply(
-            lambda r: f"{round((r['OnTime'] / r['Total']) * 100, 1)}%" if r['Total'] > 0 else "0.0%", axis=1
-        )
-        client_summary = client_summary.rename(columns={
-            client_col_name: 'Client Name',
-            'Total': 'Total Trips',
-            'OnTime': 'On-Time Trips',
-            'Delay': 'Delay Trips'
-        }).sort_values(by='Total Trips', ascending=False)
-        
-        client_summary.insert(0, 'S.No', range(1, 1 + len(client_summary)))
-        st.markdown(render_html_table(client_summary), unsafe_allow_html=True)
-        
-        excel_client = to_excel_bytes({'Client_Performance': client_summary})
-        st.download_button(label="📥 Download Client Performance", data=excel_client, file_name="Client_Performance.xlsx", mime=EXCEL_MIME, type="secondary", key=f"dl_client_{unique_key}")
-    else:
-        st.info("Client performance data available nahi hai.")
-
-    # 3. VEHICLE-WISE PERFORMANCE REPORT
-    st.markdown("<br><h3 style='color:#48cae4; font-size:22px; margin-bottom:15px;'>🚛 Vehicle-wise Performance Report</h3>", unsafe_allow_html=True)
-    
-    lorry_col = next((c for c in reported_df.columns if c.lower().strip() in ['lorry no.', 'lorry no', 'vehicle no', 'vehicle', 'truck']), None)
-    if not lorry_col: lorry_col = next((c for c in reported_df.columns if any(k in c.lower() for k in ['lorry', 'vehicle', 'truck'])) , None)
-    from_col = next((c for c in reported_df.columns if c.lower().strip() in ['from', 'source', 'origin']), None)
-    dest_col = next((c for c in reported_df.columns if c.lower().strip() in ['destination', 'to']), None)
-
-    if lorry_col and late_col:
-        temp_veh_df = reported_df.copy()
-        if from_col and dest_col: temp_veh_df['Route'] = temp_veh_df[from_col].astype(str).str.strip() + " ➔ " + temp_veh_df[dest_col].astype(str).str.strip()
-        else: temp_veh_df['Route'] = "N/A"
-
-        v_f1, v_f2, v_f3, v_f4 = st.columns(4)
-        veh_staff_list = ["ALL"] + sorted([str(x).strip() for x in temp_veh_df[staff_col].dropna().unique() if str(x).strip() != ""]) if staff_col else ["ALL"]
-        veh_client_list = ["ALL"] + sorted([str(x).strip() for x in temp_veh_df[client_col_name].dropna().unique() if str(x).strip() != ""]) if client_col_name in temp_veh_df.columns else ["ALL"]
-        freq_options = ["ALL", "> 1 Delay", "> 2 Delays", "> 3 Delays", "> 4 Delays", "> 5 Delays"]
-        
-        with v_f1: sel_veh_staff = st.selectbox("👨‍💼 Controlling Staff:", veh_staff_list, key=f"vs_{unique_key}")
-        with v_f2: sel_veh_client = st.selectbox("🏢 Client:", veh_client_list, key=f"vc_{unique_key}")
-        with v_f3: sel_veh_freq = st.selectbox("🔄 Delay Frequency:", freq_options, key=f"vf_{unique_key}")
-        with v_f4: sel_veh_status = st.selectbox("⚖️ Delay/On-time:", ["ALL", "Only On-Time", "Only Delay"], key=f"vst_{unique_key}")
-
-        veh_df = temp_veh_df.copy()
-        if sel_veh_staff != "ALL" and staff_col: veh_df = veh_df[veh_df[staff_col].astype(str).str.strip() == sel_veh_staff]
-        if sel_veh_client != "ALL" and client_col_name in veh_df.columns: veh_df = veh_df[veh_df[client_col_name].astype(str).str.strip() == sel_veh_client]
-
-        veh_df['Is_OnTime'] = veh_df[late_col].apply(is_zero_late)
-        veh_df['Is_Delay'] = ~veh_df[late_col].apply(is_zero_late)
-
-        if sel_veh_status == "Only On-Time": veh_df = veh_df[veh_df['Is_OnTime']]
-        elif sel_veh_status == "Only Delay": veh_df = veh_df[veh_df['Is_Delay']]
-
-        veh_groups = veh_df.groupby([lorry_col, 'Route']).agg(Total=('Is_OnTime', 'count'), OnTime=('Is_OnTime', 'sum'), Delay=('Is_Delay', 'sum')).reset_index()
-        
-        if sel_veh_freq != "ALL":
-            if sel_veh_freq == "> 1 Delay": veh_groups = veh_groups[veh_groups['Delay'] > 1]
-            elif sel_veh_freq == "> 2 Delays": veh_groups = veh_groups[veh_groups['Delay'] > 2]
-            elif sel_veh_freq == "> 3 Delays": veh_groups = veh_groups[veh_groups['Delay'] > 3]
-            elif sel_veh_freq == "> 4 Delays": veh_groups = veh_groups[veh_groups['Delay'] > 4]
-            elif sel_veh_freq == "> 5 Delays": veh_groups = veh_groups[veh_groups['Delay'] > 5]
-
-        veh_summary_df = veh_groups.copy()
-        veh_summary_df['On-Time %'] = veh_summary_df.apply(lambda r: f"{round((r['OnTime'] / r['Total']) * 100, 1)}%" if r['Total'] > 0 else "0.0%", axis=1)
-        veh_summary_df = veh_summary_df.rename(columns={lorry_col: 'Vehicle No.', 'Route': 'Route (From ➔ Destination)', 'Total': 'Total Trips', 'OnTime': 'On-Time Trips', 'Delay': 'Delay Trips'})
-        veh_summary_df = veh_summary_df.sort_values(by='Total Trips', ascending=False)
-        veh_summary_df.insert(0, 'S.No', range(1, 1 + len(veh_summary_df)))
-
-        if not veh_summary_df.empty:
-            st.markdown(render_html_table(veh_summary_df), unsafe_allow_html=True)
-            excel_veh = to_excel_bytes({'Vehicle_Performance': veh_summary_df})
-            st.download_button(label="📥 Download Vehicle Performance", data=excel_veh, file_name="Vehicle_Performance.xlsx", mime=EXCEL_MIME, type="primary", key=f"dl_veh_{unique_key}")
-        else:
-            st.info("Vehicle performance ke liye records nahi mile.")
-    else:
-        st.info("Vehicle performance ke liye required columns nahi mile.")
-
-
-# ================= FILE PROCESSING =================
-def process_uploaded_files(uploaded_files):
-    callout_dfs, mis_dfs = [], []
-    for uploaded_file in uploaded_files:
-        try:
-            filename_lower = uploaded_file.name.lower()
-            temp_df = pd.read_csv(uploaded_file, low_memory=False) if filename_lower.endswith('.csv') else pd.read_excel(uploaded_file)
-            if temp_df is None or temp_df.empty: continue
-            temp_df.columns = temp_df.columns.astype(str).str.strip()
-            
-            vendor_c = vendor_column(temp_df)
-            if ('callout' in filename_lower) or ('breakdown' in filename_lower):
-                temp_df['VendorName'] = temp_df[vendor_c].apply(lambda x: clean_party(x, False)) if vendor_c else "Other"
-                callout_dfs.append(temp_df)
-            else:
-                temp_df['VendorName'] = temp_df[vendor_c].apply(lambda x: clean_party(x, True)) if vendor_c else "Other"
-                mis_dfs.append(temp_df)
-        except Exception as e: st.error(f"Error: {e}")
-
-    return pd.concat(callout_dfs, ignore_index=True) if callout_dfs else pd.DataFrame(), pd.concat(mis_dfs, ignore_index=True) if mis_dfs else pd.DataFrame()
-
-
-# ================= MAIN APP =================
-def main():
-    st.markdown("<h1 class='premium-title'>🚀 Sales Manager Live Monitoring Dashboard</h1>", unsafe_allow_html=True)
-
-    if 'stored_mis_df' not in st.session_state: st.session_state.stored_mis_df = pd.read_pickle(MIS_PATH) if os.path.exists(MIS_PATH) else pd.DataFrame()
-    if 'stored_callout_df' not in st.session_state: st.session_state.stored_callout_df = pd.read_pickle(CALLOUT_PATH) if os.path.exists(CALLOUT_PATH) else pd.DataFrame()
-
-    render_news_ticker(st.session_state.stored_mis_df)
-
-    st.sidebar.markdown("<h2 style='color:#64ffda; font-size:18px;'>🔐 User Authentication</h2>", unsafe_allow_html=True)
-    
-    if 'logged_in_user' not in st.session_state:
-        st.session_state.logged_in_user = None
-        st.session_state.user_role = None
-        st.session_state.staff_name = None
-
-    if st.session_state.logged_in_user is None:
-        login_type = st.sidebar.radio("Login As:", ["Admin (Full Access)", "Staff Portal"])
-        
-        if login_type == "Admin (Full Access)":
-            adm_pass = st.sidebar.text_input("Admin Password", type="password")
-            if st.sidebar.button("Admin Login"):
-                if adm_pass == "admin123":
-                    st.session_state.logged_in_user = "Admin"
-                    st.session_state.user_role = "admin"
-                    st.rerun()
-                else:
-                    st.sidebar.error("Wrong Password!")
-        else:
-            username = st.sidebar.text_input("Staff Username (e.g., dhananjay)")
-            password = st.sidebar.text_input("Staff Password", type="password")
-            if st.sidebar.button("Staff Login"):
-                user_info = STAFF_CREDENTIALS.get(username.lower())
-                if user_info and user_info["password"] == password:
-                    st.session_state.logged_in_user = username
-                    st.session_state.user_role = "staff"
-                    st.session_state.staff_name = user_info["staff_name"]
-                    st.rerun()
-                else:
-                    st.sidebar.error("Invalid Username or Password!")
-        return
-
-    st.sidebar.success(f"Logged in as: **{st.session_state.logged_in_user.upper()}**")
-    if st.sidebar.button("🚪 Logout"):
-        st.session_state.logged_in_user = None
-        st.session_state.user_role = None
-        st.session_state.staff_name = None
-        st.rerun()
-
-    if st.session_state.user_role == "admin":
-        st.sidebar.markdown("---")
-        st.sidebar.markdown("<h2 style='color:#64ffda; font-size:18px;'>📁 Data Management (Admin Only)</h2>", unsafe_allow_html=True)
-        uploaded_files = st.sidebar.file_uploader("Upload MIS/Callout (Excel/CSV)", type=["xlsx", "csv"], accept_multiple_files=True)
-
-        if uploaded_files and st.sidebar.button("💾 Process & Save Data", type="primary"):
-            c_df, m_df = process_uploaded_files(uploaded_files)
-            st.session_state.stored_callout_df = c_df
-            st.session_state.stored_mis_df = m_df
-            c_df.to_pickle(CALLOUT_PATH)
-            m_df.to_pickle(MIS_PATH)
-            st.sidebar.success("Saved successfully!")
-            st.rerun()
-
-        if st.sidebar.button("🗑️ Clear Dashboard Data"):
-            st.session_state.stored_callout_df = pd.DataFrame()
-            st.session_state.stored_mis_df = pd.DataFrame()
-            if os.path.exists(CALLOUT_PATH): os.remove(CALLOUT_PATH)
-            if os.path.exists(MIS_PATH): os.remove(MIS_PATH)
-            st.rerun()
-    else:
-        st.sidebar.info("🔒 Staff Account: Upload and Delete features are disabled for security.")
-
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("<h2 style='color:#64ffda; font-size:18px;'>📊 Application Views</h2>", unsafe_allow_html=True)
-    
-    app_mode = st.sidebar.selectbox("Navigate To:", [
-        "Main MIS Dashboard", 
-        "In-Transit Vehicles", 
-        "Client Summary", 
-        "Callout Summary"
-    ])
-
-    callout_df = st.session_state.stored_callout_df
-    mis_df = st.session_state.stored_mis_df
-
-    if mis_df.empty and callout_df.empty:
-        st.info("👋 Welcome! Please upload your data files in the sidebar.")
-        return
-
-    current_locked_staff = st.session_state.staff_name if st.session_state.user_role == "staff" else None
-
-    if app_mode == "Main MIS Dashboard":
-        if not mis_df.empty:
-            show_reported_vehicle_table(mis_df, unique_key="main", locked_staff=current_locked_staff)
-        else:
-            st.warning("Koi MIS data available nahi hai.")
-            
-    elif app_mode == "In-Transit Vehicles":
-        if not mis_df.empty:
-            show_in_transit_table(mis_df, unique_key="intransit", locked_staff=current_locked_staff)
-        else:
-            st.warning("Koi MIS data available nahi hai.")
-
-    elif app_mode == "Client Summary":
-        if not mis_df.empty:
-            show_client_summary_view(mis_df, unique_key="client_view", locked_staff=current_locked_staff)
-        else:
-            st.warning("Koi MIS data available nahi hai.")
-
-    elif app_mode == "Callout Summary":
-        st.markdown("<h2 style='color:#f72585;'>⚠️ Callout / Breakdown Summary</h2>", unsafe_allow_html=True)
-        if not callout_df.empty:
-            st.markdown(render_html_table(callout_df), unsafe_allow_html=True)
-        else:
-            st.info("Koi Callout data available nahi hai.")
-
-if __name__ == '__main__':
-    main()
+    # 2. CLIENT-WISE PERFORMANCE REPORT (UNFILTERED /
