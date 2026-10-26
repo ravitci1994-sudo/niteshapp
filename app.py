@@ -519,9 +519,10 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
     st.markdown("## 🚛 Vehicle-wise Trip Closed Performance")
 
     lorry_col = next((c for c in reported_df.columns if any(k in c.lower() for k in ['lorry', 'vehicle', 'truck'])) , None)
+    from_col = next((c for c in reported_df.columns if c.lower().strip() in ['from', 'source', 'origin']), None)
+    dest_col = next((c for c in reported_df.columns if c.lower().strip() in ['destination', 'to']), None)
 
     if lorry_col and late_col:
-        # 3 Dropdown Filters for Vehicle-wise Section
         v_f1, v_f2, v_f3 = st.columns(3)
         
         veh_staff_list = ["ALL"] + sorted([str(x).strip() for x in reported_df[staff_col].dropna().unique() if str(x).strip() != ""]) if staff_col else ["ALL"]
@@ -549,7 +550,13 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
         elif sel_veh_status == "Only Delay":
             veh_df = veh_df[veh_df['Is_Delay']].copy()
 
-        veh_groups = veh_df.groupby(lorry_col).agg(
+        if from_col and dest_col:
+            veh_df['Route'] = veh_df[from_col].astype(str).str.strip() + " ➔ " + veh_df[dest_col].astype(str).str.strip()
+        else:
+            veh_df['Route'] = "N/A"
+
+        # Group by both Lorry No and Route so individual routes for the same vehicle show up clearly
+        veh_groups = veh_df.groupby([lorry_col, 'Route']).agg(
             Total=('Is_OnTime', 'count'),
             OnTime=('Is_OnTime', 'sum'),
             Delay=('Is_Delay', 'sum')
@@ -561,6 +568,7 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
         )
         veh_summary_df = veh_summary_df.rename(columns={
             lorry_col: 'Lorry No. / Vehicle',
+            'Route': 'Route (From ➔ Destination)',
             'Total': 'Total Trips',
             'OnTime': 'On-Time Trips',
             'Delay': 'Delay Trips'
