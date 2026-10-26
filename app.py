@@ -743,7 +743,7 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
         filename_veh = f"Vehicle_Performance_Report{staff_tag}{client_tag}{freq_tag}{status_tag}.xlsx"
 
         st.download_button(
-            label="📥 Download Vehicle-wise Report Excel",
+            label="📥 Download Route/Vehicle Report Excel",
             data=excel_bytes_veh,
             file_name=filename_veh,
             mime=EXCEL_MIME,
@@ -754,30 +754,44 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
         st.info("Vehicle-wise performance ke liye koi data available nahi hai.")
 
 
-# ================= FILE PROCESSING =================
+# ================= FILE PROCESSING WITH SAFE ENCODING =================
 def process_uploaded_files(uploaded_files):
     callout_dfs = []
     mis_dfs = []
 
     for uploaded_file in uploaded_files:
         try:
-            if uploaded_file.name.lower().endswith('.csv'):
-                temp_df = pd.read_csv(uploaded_file, low_memory=False)
+            filename_lower = uploaded_file.name.lower()
+            temp_df = None
+
+            # Safe CSV reading with multi-encoding fallback to prevent UnicodeDecodeError
+            if filename_lower.endswith('.csv'):
+                try:
+                    temp_df = pd.read_csv(uploaded_file, low_memory=False, encoding='utf-8')
+                except UnicodeDecodeError:
+                    uploaded_file.seek(0)
+                    try:
+                        temp_df = pd.read_csv(uploaded_file, low_memory=False, encoding='latin-1')
+                    except UnicodeDecodeError:
+                        uploaded_file.seek(0)
+                        temp_df = pd.read_csv(uploaded_file, low_memory=False, encoding='cp1252')
             else:
                 temp_df = pd.read_excel(uploaded_file)
 
+            if temp_df is None or temp_df.empty:
+                continue
+
             temp_df.columns = temp_df.columns.astype(str).str.strip()
-            fname = uploaded_file.name.lower()
             
             # Smart Callout Identification
             has_category = any(kw in c.lower() for c in temp_df.columns for kw in ['category', 'cat', 'callout', 'reason', 'breakdown', 'issue', 'type'])
-            is_callout = ('callout' in fname) or ('breakdown' in fname) or has_category
+            is_callout = ('callout' in filename_lower) or ('breakdown' in filename_lower) or has_category
 
             if is_callout:
                 vendor_c = vendor_column(temp_df)
                 if vendor_c:
                     temp_df['VendorName'] = temp_df[vendor_c].apply(lambda x: clean_party(x, keep_other=False))
-                    # Filter for DHL, Trackon, and Busybees specifically[cite: 8]
+                    # Filter specifically for DHL, Trackon, and Busybees
                     temp_df = temp_df[temp_df['VendorName'].isin(['DHL', 'Trackon', 'Busybees'])].copy()
                 else:
                     temp_df['VendorName'] = "Other"
@@ -819,7 +833,7 @@ def main():
     st.title("🚀 Sales Manager Live Monitoring Dashboard")
     st.markdown("Upload your MIS or Callout files to view real-time trip performance and statistics.")
 
-    # Persistent Storage Auto-load on Page Startup / Refresh[cite: 6]
+    # Persistent Storage Auto-load on Page Startup / Refresh
     if 'stored_mis_df' not in st.session_state or st.session_state.stored_mis_df.empty:
         if os.path.exists(MIS_PATH):
             try:
