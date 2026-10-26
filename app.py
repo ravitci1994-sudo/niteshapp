@@ -769,23 +769,18 @@ def process_uploaded_files(uploaded_files):
             temp_df.columns = temp_df.columns.astype(str).str.strip()
             fname = uploaded_file.name.lower()
             
-            has_category = any(kw in c.lower() for c in temp_df.columns for kw in ['category', 'cat', 'callout', 'reason', 'breakdown', 'issue'])
-            is_callout = ('callout' in fname) or has_category or ('breakdown' in fname)
+            # Smart Callout Identification
+            has_category = any(kw in c.lower() for c in temp_df.columns for kw in ['category', 'cat', 'callout', 'reason', 'breakdown', 'issue', 'type'])
+            is_callout = ('callout' in fname) or ('breakdown' in fname) or has_category
 
             if is_callout:
-                cat_col = next((c for c in temp_df.columns if any(kw in c.lower() for kw in ['category', 'cat', 'reason', 'issue'])), None)
-                if cat_col:
-                    allowed_keywords = ['breakdown', 'break down', 'accident', 'tyre', 'tire', 'puncture', 'puncher', 'blast']
-                    def check_cat(val):
-                        if is_blank(val):
-                            return False
-                        s = str(val).lower().strip()
-                        return any(kw in s for kw in allowed_keywords)
-                    temp_df = temp_df[temp_df[cat_col].apply(check_cat)].copy()
-
                 vendor_c = vendor_column(temp_df)
                 if vendor_c:
-                    temp_df['VendorName'] = temp_df[vendor_c].apply(lambda x: clean_party(x, keep_other=True))
+                    temp_df['VendorName'] = temp_df[vendor_c].apply(lambda x: clean_party(x, keep_other=False))
+                    # Filter for DHL, Trackon, and Busybees specifically[cite: 8]
+                    temp_df = temp_df[temp_df['VendorName'].isin(['DHL', 'Trackon', 'Busybees'])].copy()
+                else:
+                    temp_df['VendorName'] = "Other"
 
                 date_col = next((c for c in temp_df.columns if 'date' in c.lower() or 'desp' in c.lower() or 'time' in c.lower()), None)
                 if date_col:
@@ -824,21 +819,26 @@ def main():
     st.title("🚀 Sales Manager Live Monitoring Dashboard")
     st.markdown("Upload your MIS or Callout files to view real-time trip performance and statistics.")
 
-    # Initialize Session State & Load Persistent Disk Data if available
-    if 'stored_callout_df' not in st.session_state:
-        if os.path.exists(CALLOUT_PATH):
-            st.session_state.stored_callout_df = pd.read_pickle(CALLOUT_PATH)
-        else:
-            st.session_state.stored_callout_df = pd.DataFrame()
-
-    if 'stored_mis_df' not in st.session_state:
+    # Persistent Storage Auto-load on Page Startup / Refresh[cite: 6]
+    if 'stored_mis_df' not in st.session_state or st.session_state.stored_mis_df.empty:
         if os.path.exists(MIS_PATH):
-            st.session_state.stored_mis_df = pd.read_pickle(MIS_PATH)
+            try:
+                st.session_state.stored_mis_df = pd.read_pickle(MIS_PATH)
+            except Exception:
+                st.session_state.stored_mis_df = pd.DataFrame()
         else:
             st.session_state.stored_mis_df = pd.DataFrame()
 
-    if 'data_loaded' not in st.session_state:
-        st.session_state.data_loaded = not st.session_state.stored_mis_df.empty or not st.session_state.stored_callout_df.empty
+    if 'stored_callout_df' not in st.session_state or st.session_state.stored_callout_df.empty:
+        if os.path.exists(CALLOUT_PATH):
+            try:
+                st.session_state.stored_callout_df = pd.read_pickle(CALLOUT_PATH)
+            except Exception:
+                st.session_state.stored_callout_df = pd.DataFrame()
+        else:
+            st.session_state.stored_callout_df = pd.DataFrame()
+
+    st.session_state.data_loaded = not st.session_state.stored_mis_df.empty or not st.session_state.stored_callout_df.empty
 
     # Sidebar Controls
     st.sidebar.header("📁 Data Management")
@@ -862,7 +862,7 @@ def main():
         st.session_state.stored_mis_df = pd.DataFrame()
         st.session_state.data_loaded = False
         
-        # Remove from disk
+        # Clean local storage
         if os.path.exists(CALLOUT_PATH):
             os.remove(CALLOUT_PATH)
         if os.path.exists(MIS_PATH):
