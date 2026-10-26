@@ -53,7 +53,7 @@ st.markdown("""
     }
     @keyframes textShine { to { background-position: 200% center; } }
     
-    /* 🔥 NEWS TICKER ANIMATION CSS (SLOW & READABLE) 🔥 */
+    /* 🔥 NEWS TICKER ANIMATION CSS 🔥 */
     .news-ticker-container {
         width: 100%;
         background: linear-gradient(90deg, #f72585, #7209b7);
@@ -229,30 +229,18 @@ def render_news_ticker(df):
     if df.empty:
         ticker_text = "🟢 SYSTEM READY... WAITING FOR DATA UPLOAD... PLEASE UPLOAD MIS FILE FROM SIDEBAR..."
     else:
-        late_col = next((c for c in ['Late Hrs', 'Delay Hrs', 'Delay'] if c in df.columns), None)
-        staff_col = next((c for c in df.columns if 'controlling' in c.lower() or 'staff' in c.lower()), None)
-        client_col = vendor_column(df)
+        # Calculate closed vs in-transit for ticker
+        final_rep_col = next((c for c in ['Final Touching Reporting Date & Time', 'Reporting Date & Time', 'Reporting Date', 'Desp. Date & Time'] if c in df.columns), None)
+        total = len(df)
         
-        if late_col:
-            total = len(df)
-            delayed = len(df[~df[late_col].apply(is_zero_late)])
-            on_time_pct = round(((total - delayed) / total) * 100, 1) if total > 0 else 0
-            
-            staff_text = ""
-            if staff_col:
-                top_staff = df[staff_col].value_counts()
-                if not top_staff.empty:
-                    staff_text = f" | 👨‍💼 TOP STAFF: {top_staff.index[0]} ({top_staff.iloc[0]} Trips)"
-            
-            client_text = ""
-            if client_col:
-                top_client = df[client_col].value_counts()
-                if not top_client.empty:
-                    client_text = f" | 🏢 TOP CLIENT: {top_client.index[0]} ({top_client.iloc[0]} Trips)"
-            
-            ticker_text = f"🚀 LIVE PERFORMANCE: Total Trips: {total} | ✅ On-Time: {on_time_pct}% | ⚠️ Delayed: {delayed}{staff_text}{client_text} | ⚡ KEEP MONITORING DASHBOARD FOR REAL-TIME UPDATES"
+        if final_rep_col:
+            closed_trips = len(df[~df[final_rep_col].apply(is_blank)])
+            in_transit = len(df[df[final_rep_col].apply(is_blank)])
         else:
-            ticker_text = f"🚀 LIVE UPDATE: Total Active Trips: {len(df)} | 🟢 ALL SYSTEMS NORMAL "
+            closed_trips = total
+            in_transit = 0
+            
+        ticker_text = f"🚀 LIVE FLEET STATUS: Total Active Trips: {total} | 🏁 Trips Closed: {closed_trips} | 🚚 In-Transit Vehicles: {in_transit} | ⚡ KEEP MONITORING DASHBOARD FOR REAL-TIME UPDATES"
 
     full_text = f"<span class='ticker-item'>{ticker_text}</span>" * 4
     
@@ -263,17 +251,85 @@ def render_news_ticker(df):
     st.markdown(html_out, unsafe_allow_html=True)
 
 
+# ================= 🔥 NEW: IN-TRANSIT VEHICLE TABLE 🔥 =================
+def show_in_transit_table(df, unique_key=""):
+    st.markdown("<br><h2 style='color:#f72585;'>🚚 In-Transit Vehicles (Live Tracking)</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='color:#8892b0; font-size:14.5px;'>Showing vehicles where 'Final Touching Reporting Date & Time' is currently blank.</p>", unsafe_allow_html=True)
+    
+    final_rep_col = next((c for c in ['Final Touching Reporting Date & Time', 'Reporting Date & Time', 'Reporting Date', 'Desp. Date & Time'] if c in df.columns), None)
+    
+    if not final_rep_col:
+        st.warning("Reporting Date column not found in data.")
+        return
+        
+    # Sirf wahi rows lein jinka Final Touching Reporting Date blank hai
+    in_transit_df = df[df[final_rep_col].apply(is_blank)].copy()
+    
+    if in_transit_df.empty:
+        st.success("🎉 Sabhi vehicles ki Final Reporting ho chuki hai. Koi In-Transit vehicle nahi bacha.")
+        return
+        
+    staff_col = next((c for c in in_transit_df.columns if 'controlling' in c.lower() or 'staff' in c.lower()), None)
+    client_col_name = vendor_column(in_transit_df) or 'VendorName'
+    
+    f_col1, f_col2 = st.columns(2)
+    with f_col1:
+        staff_list = ["ALL"] + sorted([str(x).strip() for x in in_transit_df[staff_col].dropna().unique() if str(x).strip() != ""]) if staff_col else ["ALL"]
+        selected_staff = st.selectbox("👨‍💼 Filter by Controlling Staff:", staff_list, key=f"it_st_{unique_key}")
+    with f_col2:
+        client_list = ["ALL"] + sorted([str(x).strip() for x in in_transit_df[client_col_name].dropna().unique() if str(x).strip() != ""]) if client_col_name in in_transit_df.columns else ["ALL"]
+        selected_client = st.selectbox("🏢 Filter by Client:", client_list, key=f"it_c_{unique_key}")
+        
+    if selected_staff != "ALL" and staff_col:
+        in_transit_df = in_transit_df[in_transit_df[staff_col].astype(str).str.strip() == selected_staff]
+    if selected_client != "ALL" and client_col_name in in_transit_df.columns:
+        in_transit_df = in_transit_df[in_transit_df[client_col_name].astype(str).str.strip() == selected_client]
+        
+    st.metric("Total In-Transit Vehicles Found", len(in_transit_df))
+    
+    desired_cols = [
+        'Lorry No.', 'Veh.Type', 'From', 'Destination', 'Party', 'Desp. Date & Time',
+        'Hrs. Given', '1st Touching', '1st Touching Reporting Date & Time', 
+        '1st Touching Delivery Date & Time', '1st Touching Hrs.', '2nd Touching', 
+        '2nd Touching Reporting Date & Time', '2nd Touching Delivery Date & Time', 
+        '2nd Touching Hrs.', 'Tracking Remark', 'Group Name', 'Controlling Staff Name', 'Foreman Name'
+    ]
+    
+    actual_display_cols = []
+    for col in desired_cols:
+        matched_c = next((c for c in in_transit_df.columns if c.lower().strip() == col.lower().strip()), None)
+        if matched_c: actual_display_cols.append(matched_c)
+        else:
+            if col == 'Tracking Remark': 
+                rem_alt = next((c for c in in_transit_df.columns if 'remark' in c.lower()), None)
+                if rem_alt: actual_display_cols.append(rem_alt)
+            elif col == 'Party':
+                party_alt = vendor_column(in_transit_df)
+                if party_alt: actual_display_cols.append(party_alt)
+                
+    if not actual_display_cols: actual_display_cols = [c for c in in_transit_df.columns if not c.startswith('_')]
+    
+    final_it_df = in_transit_df[actual_display_cols].copy()
+    final_it_df.insert(0, 'S.No', range(1, 1 + len(final_it_df)))
+    
+    st.markdown(render_html_table(final_it_df), unsafe_allow_html=True)
+    
+    excel_bytes = to_excel_bytes({'In_Transit_Vehicles': final_it_df})
+    st.download_button(label="📥 Download In-Transit Excel", data=excel_bytes, file_name="In_Transit_Vehicles.xlsx", mime=EXCEL_MIME, type="primary", key=f"dl_it_{unique_key}")
+
+
 # ================= REPORTED VEHICLE TABLE & REPORTS =================
 def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
     final_rep_col = next((c for c in ['Final Touching Reporting Date & Time', 'Reporting Date & Time', 'Reporting Date', 'Desp. Date & Time'] if c in df.columns), None)
     if not final_rep_col: final_rep_col = next((c for c in df.columns if 'report' in c.lower() or 'desp' in c.lower() or 'date' in c.lower()), None)
 
     temp_df = df.copy()
+    # Yahan sirf wohi gaadiyan aayengi jinka Final Touching Date diya hua hai
     if final_rep_col: reported_df = temp_df[~temp_df[final_rep_col].apply(is_blank)].copy()
     else: reported_df = temp_df.copy()
 
     if reported_df.empty:
-        st.warning("Selected data khali hai.")
+        st.warning("Selected data (Reported Vehicles) khali hai.")
         return
 
     if final_rep_col:
@@ -408,7 +464,7 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
     excel_bytes_reported = to_excel_bytes({'Reported_Vehicles': final_report_df})
     st.download_button(label=f"📥 Download Filtered Excel", data=excel_bytes_reported, file_name="Reported_Vehicles.xlsx", mime=EXCEL_MIME, type="primary", key=f"dl_{unique_key}")
 
-    # ================= 🔥 CLIENT-WISE PERFORMANCE SECTION 🔥 =================
+    # ================= CLIENT-WISE PERFORMANCE SECTION =================
     st.markdown("<br><h3 style='color:#f72585; font-size:22px; margin-bottom:15px;'>🏢 Client-wise Performance Summary</h3>", unsafe_allow_html=True)
     if client_col_name and client_col_name in filtered_report_df.columns and late_col:
         client_df = filtered_report_df.copy()
@@ -459,7 +515,6 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
         veh_staff_list = ["ALL"] + sorted([str(x).strip() for x in temp_veh_df[staff_col].dropna().unique() if str(x).strip() != ""]) if staff_col else ["ALL"]
         veh_client_list = ["ALL"] + sorted([str(x).strip() for x in temp_veh_df[client_col_name].dropna().unique() if str(x).strip() != ""]) if client_col_name in temp_veh_df.columns else ["ALL"]
         
-        # 🔥 NEW: FREQUENCY FILTER OPTIONS
         freq_options = ["ALL", "> 1 Delay", "> 2 Delays", "> 3 Delays", "> 4 Delays", "> 5 Delays"]
         
         with v_f1: sel_veh_staff = st.selectbox("👨‍💼 Controlling Staff:", veh_staff_list, key=f"vs_{unique_key}")
@@ -479,7 +534,6 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
 
         veh_groups = veh_df.groupby([lorry_col, 'Route']).agg(Total=('Is_OnTime', 'count'), OnTime=('Is_OnTime', 'sum'), Delay=('Is_Delay', 'sum')).reset_index()
         
-        # 🔥 APPLYING THE DELAY FREQUENCY FILTER HERE
         if sel_veh_freq != "ALL":
             if sel_veh_freq == "> 1 Delay": veh_groups = veh_groups[veh_groups['Delay'] > 1]
             elif sel_veh_freq == "> 2 Delays": veh_groups = veh_groups[veh_groups['Delay'] > 2]
@@ -543,10 +597,9 @@ def main():
     if 'stored_mis_df' not in st.session_state: st.session_state.stored_mis_df = pd.read_pickle(MIS_PATH) if os.path.exists(MIS_PATH) else pd.DataFrame()
     if 'stored_callout_df' not in st.session_state: st.session_state.stored_callout_df = pd.read_pickle(CALLOUT_PATH) if os.path.exists(CALLOUT_PATH) else pd.DataFrame()
 
-    # 🔥 CALLING THE SLOW NEWS TICKER
     render_news_ticker(st.session_state.stored_mis_df)
 
-    st.sidebar.markdown("<h2 style='color:#64ffda; font-size:18px; margin-top:20px;'>📁 Data Management</h2>", unsafe_allow_html=True)
+    st.sidebar.markdown("<h2 style='color:#64ffda; font-size:18px; margin-top:10px;'>📁 Data Management</h2>", unsafe_allow_html=True)
     uploaded_files = st.sidebar.file_uploader("Upload MIS/Callout (Excel/CSV)", type=["xlsx", "csv"], accept_multiple_files=True)
 
     if uploaded_files and st.sidebar.button("💾 Process & Save Data", type="primary"):
@@ -568,7 +621,13 @@ def main():
     st.sidebar.markdown("---")
     st.sidebar.markdown("<h2 style='color:#64ffda; font-size:18px;'>📊 Application Views</h2>", unsafe_allow_html=True)
     
-    app_mode = st.sidebar.selectbox("Navigate To:", ["Main MIS Dashboard", "Callout Summary", "Staff Login Portal"])
+    # 🔥 YAHAN ADD KIYA GAYA HAI IN-TRANSIT VEHICLES 🔥
+    app_mode = st.sidebar.selectbox("Navigate To:", [
+        "Main MIS Dashboard", 
+        "In-Transit Vehicles", 
+        "Callout Summary", 
+        "Staff Login Portal"
+    ])
 
     callout_df = st.session_state.stored_callout_df
     mis_df = st.session_state.stored_mis_df
@@ -580,6 +639,13 @@ def main():
     if app_mode == "Main MIS Dashboard":
         if not mis_df.empty:
             show_reported_vehicle_table(mis_df, unique_key="main")
+        else:
+            st.warning("Koi MIS data available nahi hai.")
+            
+    # 🔥 IN-TRANSIT VEHICLES WALA NAYA SECTION 🔥
+    elif app_mode == "In-Transit Vehicles":
+        if not mis_df.empty:
+            show_in_transit_table(mis_df, unique_key="intransit")
         else:
             st.warning("Koi MIS data available nahi hai.")
 
