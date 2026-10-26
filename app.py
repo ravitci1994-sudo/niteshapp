@@ -47,13 +47,63 @@ st.markdown("""
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         animation: textShine 4s linear infinite;
-        margin-bottom: 25px;
-        margin-top: 5px;
-        padding-bottom: 10px;
-        border-bottom: 1px solid rgba(255,255,255,0.1);
+        margin-bottom: 10px;
+        margin-top: 0px;
+        padding-bottom: 5px;
     }
     @keyframes textShine { to { background-position: 200% center; } }
     
+    /* 🔥 NEWS TICKER ANIMATION CSS 🔥 */
+    .news-ticker-container {
+        width: 100%;
+        background: linear-gradient(90deg, #f72585, #7209b7);
+        color: white;
+        overflow: hidden;
+        white-space: nowrap;
+        box-sizing: border-box;
+        border-radius: 8px;
+        margin-bottom: 25px;
+        box-shadow: 0 4px 15px rgba(247, 37, 133, 0.4);
+        position: relative;
+        display: flex;
+        align-items: center;
+        height: 40px;
+    }
+    .ticker-label {
+        background: #050b14;
+        color: #64ffda;
+        font-weight: 900;
+        padding: 0 15px;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        position: absolute;
+        left: 0;
+        z-index: 10;
+        border-radius: 8px 0 0 8px;
+        border-right: 2px solid #64ffda;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        box-shadow: 5px 0 15px rgba(0,0,0,0.5);
+    }
+    .ticker-text-wrapper {
+        padding-left: 160px; /* Space for the label */
+        display: inline-block;
+        white-space: nowrap;
+        animation: marquee 20s linear infinite;
+    }
+    .ticker-item {
+        display: inline-block;
+        padding: 0 50px;
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+    }
+    @keyframes marquee {
+        0% { transform: translateX(100vw); }
+        100% { transform: translateX(-100%); }
+    }
+
     /* 5. Streamlit Widget Enhancements */
     .stSelectbox div[data-baseweb="select"] > div {
         background-color: rgba(28, 37, 65, 0.6) !important;
@@ -198,6 +248,41 @@ def to_excel_bytes(sheets):
         for name, frame in sheets.items(): frame.to_excel(writer, index=False, sheet_name=name)
     return buffer_excel.getvalue()
 
+# ================= NEWS TICKER COMPONENT =================
+def render_news_ticker(df):
+    if df.empty:
+        ticker_text = "🟢 SYSTEM READY... WAITING FOR DATA UPLOAD... PLEASE UPLOAD MIS FILE FROM SIDEBAR..."
+    else:
+        late_col = next((c for c in ['Late Hrs', 'Delay Hrs', 'Delay'] if c in df.columns), None)
+        if late_col:
+            total = len(df)
+            delayed = len(df[~df[late_col].apply(is_zero_late)])
+            delay_pct = round((delayed / total) * 100, 1) if total > 0 else 0
+            
+            from_col = next((c for c in df.columns if c.lower().strip() in ['from', 'source', 'origin']), None)
+            dest_col = next((c for c in df.columns if c.lower().strip() in ['destination', 'to']), None)
+            route_text = ""
+            if from_col and dest_col and delayed > 0:
+                del_df = df[~df[late_col].apply(is_zero_late)]
+                routes = del_df[from_col].astype(str) + " ➔ " + del_df[dest_col].astype(str)
+                if not routes.empty:
+                    top_r = routes.value_counts().index[0]
+                    route_text = f" | 🛣️ HIGHEST DELAY ROUTE: {top_r} "
+            
+            ticker_text = f"🚀 LIVE FLEET STATUS: Total Active Trips: {total} | ⚠️ Delayed Vehicles: {delayed} ({delay_pct}%){route_text} | ⚡ KEEP MONITORING DASHBOARD FOR REAL-TIME UPDATES "
+        else:
+            ticker_text = f"🚀 LIVE UPDATE: Total Active Trips: {len(df)} | 🟢 ALL SYSTEMS NORMAL "
+
+    # Repeat text to make it continuous seamless scroll
+    full_text = f"<span class='ticker-item'>{ticker_text}</span>" * 4
+    
+    html_out = f"""<div class="news-ticker-container">
+<div class="ticker-label">BREAKING 🔴</div>
+<div class="ticker-text-wrapper">{full_text}</div>
+</div>"""
+    st.markdown(html_out, unsafe_allow_html=True)
+
+
 # ================= BUILT-IN SMART INSIGHTS ENGINE =================
 def render_smart_insights(df, late_col, client_col):
     if df.empty or not late_col: return
@@ -207,7 +292,6 @@ def render_smart_insights(df, late_col, client_col):
     delay_count = len(delayed_vehicles)
     delay_percentage = round((delay_count / total_vehicles) * 100, 1) if total_vehicles > 0 else 0
     
-    # Analyze Routes
     from_col = next((c for c in df.columns if c.lower().strip() in ['from', 'source', 'origin']), None)
     dest_col = next((c for c in df.columns if c.lower().strip() in ['destination', 'to']), None)
     
@@ -219,7 +303,6 @@ def render_smart_insights(df, late_col, client_col):
             top_route_count = delayed_routes.value_counts().iloc[0]
             top_route_str = f"Route <strong>{top_route}</strong> is facing maximum bottlenecks with <strong>{top_route_count}</strong> delayed vehicles."
 
-    # Analyze Clients
     top_client_str = "No specific client data available."
     if client_col and delay_count > 0:
         if not delayed_vehicles[client_col].empty:
@@ -227,7 +310,6 @@ def render_smart_insights(df, late_col, client_col):
             top_client_count = delayed_vehicles[client_col].value_counts().iloc[0]
             top_client_str = f"Client <strong>{top_client}</strong> is heavily impacted, experiencing <strong>{top_client_count}</strong> delays."
 
-    # Generate HTML Output - NO LEADING SPACES to prevent code block parsing
     html_out = f"""<div class="smart-panel">
 <div class="smart-title">📊 Smart Auto-Insights Engine</div>
 <div style="color:#8892b0; font-size:13.5px; margin-bottom:15px;">Live analysis generated directly from current filters without external APIs.</div>
@@ -244,7 +326,6 @@ def render_smart_insights(df, late_col, client_col):
 <span><strong>Vendor Impact:</strong> {top_client_str}</span>
 </div>
 </div>"""
-    
     st.markdown(html_out, unsafe_allow_html=True)
 
 
@@ -487,6 +568,9 @@ def main():
 
     if 'stored_mis_df' not in st.session_state: st.session_state.stored_mis_df = pd.read_pickle(MIS_PATH) if os.path.exists(MIS_PATH) else pd.DataFrame()
     if 'stored_callout_df' not in st.session_state: st.session_state.stored_callout_df = pd.read_pickle(CALLOUT_PATH) if os.path.exists(CALLOUT_PATH) else pd.DataFrame()
+
+    # 🔥 CALLING THE NEWS TICKER FUNCTION (RIGHT BELOW TITLE) 🔥
+    render_news_ticker(st.session_state.stored_mis_df)
 
     st.sidebar.markdown("<h2 style='color:#64ffda; font-size:18px; margin-top:10px;'>📁 Data Management</h2>", unsafe_allow_html=True)
     uploaded_files = st.sidebar.file_uploader("Upload MIS/Callout (Excel/CSV)", type=["xlsx", "csv"], accept_multiple_files=True)
