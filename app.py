@@ -5,6 +5,7 @@ import math
 import io
 import os
 import html as html_lib
+import urllib.parse
 
 # 1. Page Configuration
 st.set_page_config(page_title="Sales Manager Live Monitoring Dashboard", layout="wide", initial_sidebar_state="expanded")
@@ -208,7 +209,6 @@ def show_in_transit_table(df, unique_key="", locked_staff=None):
         st.success("🎉 Koi In-Transit vehicle nahi bacha.")
         return
 
-    # 🔥 FILTER BY CLIENT DROPDOWN ADDED HERE 🔥
     f_col1, f_col2 = st.columns(2)
     with f_col1:
         client_list = ["ALL"] + sorted([str(x).strip() for x in in_transit_df[client_col_name].dropna().unique() if str(x).strip() != ""]) if client_col_name in in_transit_df.columns else ["ALL"]
@@ -311,8 +311,24 @@ def show_reported_vehicle_table(df, unique_key="", locked_staff=None):
     # 1. LIVE DATA TABLE
     st.markdown(render_html_table(final_report_df), unsafe_allow_html=True)
     
-    excel_bytes = to_excel_bytes({'Reported_Vehicles': final_report_df})
-    st.download_button(label="📥 Download Filtered Excel", data=excel_bytes, file_name="Reported_Vehicles.xlsx", mime=EXCEL_MIME, type="primary", key=f"dl_{unique_key}")
+    # 🔥 BOTH DOWNLOAD EXCEL AND SEND MAIL BUTTONS SIDE BY SIDE 🔥
+    col_b1, col_b2 = st.columns(2)
+    with col_b1:
+        excel_bytes = to_excel_bytes({'Reported_Vehicles': final_report_df})
+        st.download_button(label="📥 Download Filtered Excel", data=excel_bytes, file_name="Reported_Vehicles.xlsx", mime=EXCEL_MIME, type="primary", key=f"dl_{unique_key}")
+        
+    with col_b2:
+        with st.expander("📧 Send Data via Email"):
+            recipient_email = st.text_input("Recipient Email:", placeholder="manager@example.com", key=f"recipient_{unique_key}")
+            if st.button("📤 Generate Mail Link", key=f"btn_send_{unique_key}"):
+                if recipient_email:
+                    subject = urllib.parse.quote("Sales Manager Dashboard - Filtered Report")
+                    body = f"Hello,%0D%0A%0D%0APlease find the filtered MIS report containing {len(final_report_df)} records.%0D%0A%0D%0ARegards,%0D%0ASales Dashboard"
+                    mailto_url = f"mailto:{recipient_email}?subject={subject}&body={body}"
+                    st.success("✅ Mail link ready!")
+                    st.markdown(f'<a href="{mailto_url}" target="_blank" style="background:#64ffda;color:#050b14;padding:8px 16px;border-radius:6px;text-decoration:none;font-weight:bold;">✉️ Click to Open Mail App</a>', unsafe_allow_html=True)
+                else:
+                    st.error("⚠️ Enter valid email.")
 
     late_col = next((c for c in ['Late Hrs', 'Delay Hrs', 'Delay'] if c in reported_df.columns), None)
 
