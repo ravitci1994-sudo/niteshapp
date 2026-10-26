@@ -526,10 +526,12 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
     dest_col = next((c for c in reported_df.columns if c.lower().strip() in ['destination', 'to']), None)
 
     if lorry_col and late_col:
-        v_f1, v_f2, v_f3 = st.columns(3)
+        # 4 Dropdown Filters for Vehicle-wise Section (Staff, Client, Vehicle No., Delay/On-time)
+        v_f1, v_f2, v_f3, v_f4 = st.columns(4)
         
         veh_staff_list = ["ALL"] + sorted([str(x).strip() for x in reported_df[staff_col].dropna().unique() if str(x).strip() != ""]) if staff_col else ["ALL"]
         veh_client_list = ["ALL"] + sorted([str(x).strip() for x in reported_df[client_col_name].dropna().unique() if str(x).strip() != ""]) if client_col_name in reported_df.columns else ["ALL"]
+        veh_list_options = ["ALL"] + sorted([str(x).strip() for x in reported_df[lorry_col].dropna().unique() if str(x).strip() != ""])
         veh_status_list = ["ALL", "Only On-Time", "Only Delay"]
 
         with v_f1:
@@ -537,6 +539,8 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
         with v_f2:
             sel_veh_client = st.selectbox("🏢 Filter by Client:", veh_client_list, index=0, key=f"veh_client_{unique_key}")
         with v_f3:
+            sel_veh_number = st.selectbox("🚛 Filter by Vehicle No.:", veh_list_options, index=0, key=f"veh_number_{unique_key}")
+        with v_f4:
             sel_veh_status = st.selectbox("⚖️ Filter by Delay and On-time:", veh_status_list, index=0, key=f"veh_status_{unique_key}")
 
         veh_df = reported_df.copy()
@@ -544,6 +548,8 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
             veh_df = veh_df[veh_df[staff_col].astype(str).str.strip() == sel_veh_staff].copy()
         if sel_veh_client != "ALL" and client_col_name in veh_df.columns:
             veh_df = veh_df[veh_df[client_col_name].astype(str).str.strip() == sel_veh_client].copy()
+        if sel_veh_number != "ALL" and lorry_col:
+            veh_df = veh_df[veh_df[lorry_col].astype(str).str.strip() == sel_veh_number].copy()
 
         veh_df['Is_OnTime'] = veh_df[late_col].apply(is_zero_late)
         veh_df['Is_Delay'] = ~veh_df[late_col].apply(is_zero_late)
@@ -558,7 +564,6 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
         else:
             veh_df['Route'] = "N/A"
 
-        # Group by Lorry No (Vehicle No) and Route
         veh_groups = veh_df.groupby([lorry_col, 'Route']).agg(
             Total=('Is_OnTime', 'count'),
             OnTime=('Is_OnTime', 'sum'),
