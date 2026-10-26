@@ -6,12 +6,6 @@ import io
 import os
 import html as html_lib
 
-try:
-    import google.generativeai as genai
-    HAS_GENAI = True
-except ImportError:
-    HAS_GENAI = False
-
 # 1. Page Configuration
 st.set_page_config(page_title="Sales Manager Live Monitoring Dashboard", layout="wide", initial_sidebar_state="expanded")
 
@@ -136,21 +130,6 @@ st.markdown("""
     .stButton > button:hover {
         transform: translateY(-2px) !important;
         box-shadow: 0 6px 25px rgba(247, 37, 133, 0.6) !important;
-    }
-
-    /* AI Chat / Suggestions Container */
-    .ai-response-box {
-        background: rgba(17, 34, 64, 0.85);
-        backdrop-filter: blur(10px);
-        border-left: 4px solid #f72585;
-        border-radius: 10px;
-        padding: 20px;
-        margin-top: 15px;
-        color: #e6f1ff;
-        font-size: 15px;
-        line-height: 1.6;
-        box-shadow: 0 8px 20px rgba(0,0,0,0.4);
-        animation: fadeUp 0.6s ease-out both;
     }
 
     /* Modern Tables */
@@ -284,82 +263,6 @@ def render_news_ticker(df):
     st.markdown(html_out, unsafe_allow_html=True)
 
 
-# ================= 🔥 NEW: REAL-TIME AI COPILOT (CHAT & SUGGESTIONS) 🔥 =================
-def render_realtime_ai_copilot(df, late_col, client_col):
-    st.markdown("<br><h3 style='color:#f72585; font-size:22px; margin-bottom:10px;'>🤖 Interactive AI Copilot & Strategy Engine</h3>", unsafe_allow_html=True)
-    st.markdown("<p style='color:#8892b0; font-size:14px;'>Get actionable suggestions and chat with your logistics data in real-time.</p>", unsafe_allow_html=True)
-
-    api_key = st.session_state.get('gemini_api_key', '')
-
-    if not HAS_GENAI:
-        st.error("❌ Required AI Library Missing. Please run `pip install google-generativeai` in your terminal.")
-        return
-    
-    if not api_key:
-        st.warning("⚠️ Real-Time AI requires a Gemini API Key. Please enter it in the sidebar (🔑 AI Configuration).")
-        return
-
-    # Data Summary Prep for AI Context
-    total = len(df)
-    delayed = len(df[~df[late_col].apply(is_zero_late)]) if late_col else 0
-    from_col = next((c for c in df.columns if c.lower().strip() in ['from', 'source', 'origin']), None)
-    dest_col = next((c for c in df.columns if c.lower().strip() in ['destination', 'to']), None)
-    
-    route_context = "No route data"
-    if from_col and dest_col and delayed > 0:
-        del_df = df[~df[late_col].apply(is_zero_late)]
-        routes = del_df[from_col].astype(str) + " -> " + del_df[dest_col].astype(str)
-        if not routes.empty:
-            route_context = f"Most delayed route is {routes.value_counts().index[0]} with {routes.value_counts().iloc[0]} delays."
-
-    client_context = "No client data"
-    if client_col and delayed > 0:
-        del_df = df[~df[late_col].apply(is_zero_late)]
-        if not del_df[client_col].empty:
-            client_context = f"Client {del_df[client_col].value_counts().index[0]} is facing {del_df[client_col].value_counts().iloc[0]} delays."
-
-    data_context = f"Currently tracking {total} trips. {delayed} trips are delayed. {route_context}. {client_context}."
-
-    # Tabs for interaction
-    tab1, tab2 = st.tabs(["💡 Generate Actionable Strategy", "💬 Chat with Live Data"])
-
-    # TAB 1: AI Suggestions
-    with tab1:
-        if st.button("Generate Strategy for Current Data"):
-            with st.spinner("Analyzing current bottlenecks and generating strategy..."):
-                try:
-                    genai.configure(api_key=api_key)
-                    model = genai.GenerativeModel('gemini-1.5-flash')
-                    prompt = f"""
-                    You are an expert Logistics Operations Manager. Look at this real-time data snapshot and provide 3 actionable, professional suggestions to fix the issues.
-                    Data: {data_context}
-                    
-                    Format your response with proper spacing and emojis. Keep it directly actionable.
-                    """
-                    response = model.generate_content(prompt)
-                    st.markdown(f'<div class="ai-response-box">{response.text}</div>', unsafe_allow_html=True)
-                except Exception as e:
-                    st.error(f"API Error: Ensure your API key is correct. Details: {e}")
-
-    # TAB 2: AI Chat
-    with tab2:
-        user_question = st.chat_input("Ask AI a question about your logistics operations...")
-        if user_question:
-            st.markdown(f"**You asked:** {user_question}")
-            with st.spinner("AI is thinking..."):
-                try:
-                    genai.configure(api_key=api_key)
-                    model = genai.GenerativeModel('gemini-1.5-flash')
-                    chat_prompt = f"""
-                    Context: You are a Logistics AI Assistant. Based on this current data ({data_context}), answer the user's question.
-                    User Question: {user_question}
-                    """
-                    response = model.generate_content(chat_prompt)
-                    st.markdown(f'<div class="ai-response-box">🤖 <b>AI Reply:</b><br><br>{response.text}</div>', unsafe_allow_html=True)
-                except Exception as e:
-                    st.error(f"API Error: {e}")
-
-
 # ================= REPORTED VEHICLE TABLE & REPORTS =================
 def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
     final_rep_col = next((c for c in ['Final Touching Reporting Date & Time', 'Reporting Date & Time', 'Reporting Date', 'Desp. Date & Time'] if c in df.columns), None)
@@ -471,9 +374,6 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
     if filtered_report_df.empty:
         st.info("No data found for the selected filters.")
         return
-
-    # ================= CALL REAL-TIME AI COPILOT =================
-    render_realtime_ai_copilot(filtered_report_df, late_col, client_col_name)
 
     # EXACT USER SPECIFIED COLUMNS FILTERING
     desired_cols = [
@@ -601,12 +501,6 @@ def main():
 
     # 🔥 CALLING THE SLOW NEWS TICKER
     render_news_ticker(st.session_state.stored_mis_df)
-
-    # SIDEBAR: API KEY INPUT FOR REAL AI
-    st.sidebar.markdown("<h2 style='color:#f72585; font-size:18px;'>🔑 AI Configuration</h2>", unsafe_allow_html=True)
-    api_key_input = st.sidebar.text_input("Enter Gemini API Key", type="password", help="Required for AI Suggestions and Chat")
-    if api_key_input: 
-        st.session_state['gemini_api_key'] = api_key_input
 
     st.sidebar.markdown("<h2 style='color:#64ffda; font-size:18px; margin-top:20px;'>📁 Data Management</h2>", unsafe_allow_html=True)
     uploaded_files = st.sidebar.file_uploader("Upload MIS/Callout (Excel/CSV)", type=["xlsx", "csv"], accept_multiple_files=True)
