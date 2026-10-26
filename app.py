@@ -161,6 +161,76 @@ def vendor_column(df):
     return next((c for c in df.columns if any(k in c.lower() for k in ('vendor', 'party', 'client', 'customer'))), None)
 
 
+def render_speedometer_html(client_name, rate, ontime, delay, total):
+    clamped_rate = max(0.0, min(100.0, float(rate)))
+    if clamped_rate >= 80:
+        val_color = "#2ec4b6"
+    elif clamped_rate >= 50:
+        val_color = "#ffb703"
+    else:
+        val_color = "#e63946"
+
+    cx, cy = 120, 110
+    ticks_svg = ""
+    for p in range(0, 101, 10):
+        rad = math.radians(180 - (p * 1.8))
+        r_inner = 62 if p % 20 == 0 else 65
+        r_outer = 70
+        x1 = cx + r_inner * math.cos(rad)
+        y1 = cy - r_inner * math.sin(rad)
+        x2 = cx + r_outer * math.cos(rad)
+        y2 = cy - r_outer * math.sin(rad)
+        stroke_w = "2" if p % 20 == 0 else "1"
+        ticks_svg += f'<line x1="{x1:.1f}" y1="{y1:.1f}" x2="{x2:.1f}" y2="{y2:.1f}" stroke="#90e0ef" stroke-width="{stroke_w}"/>'
+
+    labels_svg = ""
+    for p in [0, 25, 50, 75, 100]:
+        rad = math.radians(180 - (p * 1.8))
+        r_lbl = 98
+        lx = cx + r_lbl * math.cos(rad)
+        ly = cy - r_lbl * math.sin(rad) + 4
+        labels_svg += f'<text x="{lx:.1f}" y="{ly:.1f}" fill="#90e0ef" font-size="10" font-weight="bold" text-anchor="middle" font-family="Arial">{p}%</text>'
+
+    n_rad = math.radians(180 - (clamped_rate * 1.8))
+    tip_x = cx + 65 * math.cos(n_rad)
+    tip_y = cy - 65 * math.sin(n_rad)
+
+    perp_rad = n_rad + (math.pi / 2)
+    b1_x = cx + 4.5 * math.cos(perp_rad)
+    b1_y = cy - 4.5 * math.sin(perp_rad)
+    b2_x = cx - 4.5 * math.cos(perp_rad)
+    b2_y = cy + 4.5 * math.sin(perp_rad)
+    tail_x = cx - 12 * math.cos(n_rad)
+    tail_y = cy + 12 * math.sin(n_rad)
+
+    needle_points = f"{b1_x:.1f},{b1_y:.1f} {tip_x:.1f},{tip_y:.1f} {b2_x:.1f},{b2_y:.1f} {tail_x:.1f},{tail_y:.1f}"
+    safe_name = html_lib.escape(str(client_name))
+
+    html_lines = [
+        '<div class="metric-card" style="text-align: center; padding: 18px 15px;">',
+        f'<div class="metric-title" style="margin-bottom: 8px;">🔥 {safe_name} PERFORMANCE</div>',
+        '<svg viewBox="0 0 240 130" width="100%" style="max-width: 260px; margin: 0 auto; display: block;">',
+        '<path d="M 40 110 A 80 80 0 0 1 200 110" fill="none" stroke="#0b132b" stroke-width="18" stroke-linecap="round"/>',
+        '<path d="M 40 110 A 80 80 0 0 1 120 30" fill="none" stroke="#e63946" stroke-width="14" stroke-linecap="butt"/>',
+        '<path d="M 120 30 A 80 80 0 0 1 184.72 62.98" fill="none" stroke="#ffb703" stroke-width="14" stroke-linecap="butt"/>',
+        '<path d="M 184.72 62.98 A 80 80 0 0 1 200 110" fill="none" stroke="#2ec4b6" stroke-width="14" stroke-linecap="butt"/>',
+        ticks_svg,
+        labels_svg,
+        f'<polygon points="{needle_points}" fill="#ffffff"/>',
+        f'<circle cx="{cx}" cy="{cy}" r="8" fill="#ffffff"/>',
+        f'<circle cx="{cx}" cy="{cy}" r="4" fill="#1c2541"/>',
+        '</svg>',
+        f'<div style="font-size: 34px; font-weight: 900; color: {val_color}; margin-top: 4px; text-shadow: 0 2px 4px rgba(0,0,0,0.4);">{rate}%</div>',
+        '<div style="font-size: 13px; color: #90e0ef; margin-top: 6px; font-weight: 700;">',
+        f'<span style="color:#2ec4b6;">On-Time: <b>{ontime}</b></span> &nbsp;|&nbsp; ',
+        f'<span style="color:#e63946;">Delay: <b>{delay}</b></span> &nbsp;|&nbsp; ',
+        f'<span style="color:#ffffff;">Total: <b>{total}</b></span>',
+        '</div>',
+        '</div>'
+    ]
+    return "".join(html_lines)
+
+
 def render_html_table(df_to_show, max_rows=2000):
     clean_df = df_to_show.fillna("").astype(str)
     note = ""
@@ -232,7 +302,7 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
         elif diff_days <= 28:
             return "Last 4 Weeks"
         else:
-            return None # Restrict beyond 4 weeks for quick filtering
+            return None
 
     reported_df['_Rel_Week'] = reported_df['_Rep_Date_Obj'].apply(get_relative_week_label)
 
@@ -323,7 +393,6 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
                 key=f"reported_remarks_filter_{unique_key}"
             )
 
-        # Restricted strictly to Last 1, 2, 3, 4 Weeks as requested
         strict_week_options = ["Last 1 Week", "Last 2 Weeks", "Last 3 Weeks", "Last 4 Weeks"]
         available_weeks = [w for w in strict_week_options if w in reported_df['_Rel_Week'].unique()]
 
@@ -369,7 +438,6 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
                     return False
                 filtered_report_df = filtered_report_df[filtered_report_df[late_col].apply(check_delay_range)].copy()
 
-        # Remarks Filter Logic Implementation
         if selected_remarks_filter != "ALL":
             if remark_col:
                 valid_indices = []
@@ -384,196 +452,4 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
                         valid_indices.append(idx)
                     elif selected_remarks_filter == "Delay + Without Remarks (Empty)" and is_delayed and is_empty:
                         valid_indices.append(idx)
-                    elif selected_remarks_filter == "Delay + With Remarks" and is_delayed and not is_empty:
-                        valid_indices.append(idx)
-                
-                filtered_report_df = filtered_report_df.loc[valid_indices].copy()
-
-        if selected_staff != "ALL" and staff_col:
-            filtered_report_df = filtered_report_df[filtered_report_df[staff_col].astype(str).str.strip() == selected_staff].copy()
-        if selected_client_report != "ALL" and client_col_name in filtered_report_df.columns:
-            filtered_report_df = filtered_report_df[filtered_report_df[client_col_name].astype(str).str.strip() == selected_client_report].copy()
-    else:
-        if staff_col:
-            filtered_report_df = filtered_report_df[filtered_report_df[staff_col].astype(str).str.strip() == staff_filter].copy()
-
-    if filtered_report_df.empty:
-        st.info(f"Selected filter ke liye koi Reported Vehicle data nahi mila.")
-        return
-
-    # EXACT USER SPECIFIED COLUMNS FILTERING
-    desired_cols = [
-        'Lorry No.', 'Veh.Type', 'From', 'Destination', 'Party', 'Desp. Date & Time',
-        'Hrs. Given', '1st Touching', '1st Touching Reporting Date & Time', 
-        '1st Touching Delivery Date & Time', '1st Touching Hrs.', '2nd Touching', 
-        '2nd Touching Reporting Date & Time', '2nd Touching Delivery Date & Time', 
-        '2nd Touching Hrs.', 'Final Touching Reporting Date & Time', 
-        'Total Touching Hrs.', 'Hrs. Taken with touching', 'Hrs. Taken without touching (Dly.)', 
-        'Late Hrs', 'Tracking Remark', 'Group Name', 'Controlling Staff Name', 'Foreman Name'
-    ]
-
-    actual_display_cols = []
-    for col in desired_cols:
-        matched_c = next((c for c in filtered_report_df.columns if c.lower().strip() == col.lower().strip()), None)
-        if matched_c:
-            actual_display_cols.append(matched_c)
-        else:
-            if col == 'Tracking Remark':
-                rem_alt = next((c for c in filtered_report_df.columns if 'remark' in c.lower()), None)
-                if rem_alt: actual_display_cols.append(rem_alt)
-            elif col == 'Party':
-                party_alt = vendor_column(filtered_report_df)
-                if party_alt: actual_display_cols.append(party_alt)
-
-    if not actual_display_cols:
-        actual_display_cols = [c for c in filtered_report_df.columns if not c.startswith('_')]
-
-    final_report_df = filtered_report_df[actual_display_cols].copy()
-    final_report_df.insert(0, 'S.No', range(1, 1 + len(final_report_df)))
-
-    st.markdown(render_html_table(final_report_df), unsafe_allow_html=True)
-
-    excel_bytes_reported = to_excel_bytes({'Reported_Vehicles': final_report_df})
-    st.download_button(
-        label=f"📥 Download Reported Vehicles Excel",
-        data=excel_bytes_reported,
-        file_name="Reported_Vehicles.xlsx",
-        mime=EXCEL_MIME,
-        type="primary",
-        key=f"download_reported_{unique_key}"
-    )
-
-
-# ================= FILE PROCESSING =================
-def process_uploaded_files(uploaded_files):
-    callout_dfs = []
-    mis_dfs = []
-
-    for uploaded_file in uploaded_files:
-        try:
-            filename_lower = uploaded_file.name.lower()
-            temp_df = None
-
-            if filename_lower.endswith('.csv'):
-                for enc in ['utf-8', 'latin-1', 'cp1252']:
-                    try:
-                        uploaded_file.seek(0)
-                        temp_df = pd.read_csv(uploaded_file, low_memory=False, encoding=enc)
-                        break
-                    except Exception:
-                        continue
-            else:
-                temp_df = pd.read_excel(uploaded_file)
-
-            if temp_df is None or temp_df.empty:
-                continue
-
-            temp_df.columns = temp_df.columns.astype(str).str.strip()
-            
-            is_callout = ('callout' in filename_lower) or ('breakdown' in filename_lower)
-
-            if is_callout:
-                vendor_c = vendor_column(temp_df)
-                if vendor_c:
-                    temp_df['VendorName'] = temp_df[vendor_c].apply(lambda x: clean_party(x, keep_other=False))
-                else:
-                    temp_df['VendorName'] = "Other"
-                callout_dfs.append(temp_df)
-            else:
-                vendor_c = vendor_column(temp_df)
-                if vendor_c:
-                    temp_df['VendorName'] = temp_df[vendor_c].apply(lambda x: clean_party(x, keep_other=True))
-                else:
-                    temp_df['VendorName'] = "Other"
-
-                late_col = next((c for c in ['Late Hrs', 'Delay Hrs', 'Delay'] if c in temp_df.columns), None)
-                if late_col:
-                    temp_df['Status_Category'] = temp_df[late_col].apply(lambda v: DELAY if not is_zero_late(v) else ONTIME)
-                else:
-                    temp_df['Status_Category'] = ONTIME
-
-                mis_dfs.append(temp_df)
-
-        except Exception as e:
-            st.error(f"Error processing file {uploaded_file.name}: {e}")
-
-    combined_callout = pd.concat(callout_dfs, ignore_index=True) if callout_dfs else pd.DataFrame()
-    combined_mis = pd.concat(mis_dfs, ignore_index=True) if mis_dfs else pd.DataFrame()
-    return combined_callout, combined_mis
-
-
-# ================= MAIN APP =================
-def main():
-    st.title("🚀 Sales Manager Live Monitoring Dashboard")
-    st.markdown("Upload your MIS or Callout files to view real-time trip performance and statistics.")
-
-    if 'stored_mis_df' not in st.session_state:
-        st.session_state.stored_mis_df = pd.read_pickle(MIS_PATH) if os.path.exists(MIS_PATH) else pd.DataFrame()
-
-    if 'stored_callout_df' not in st.session_state:
-        st.session_state.stored_callout_df = pd.read_pickle(CALLOUT_PATH) if os.path.exists(CALLOUT_PATH) else pd.DataFrame()
-
-    st.sidebar.header("📁 Data Management")
-    uploaded_files = st.sidebar.file_uploader("Upload MIS / Callout Excel or CSV", type=["xlsx", "csv"], accept_multiple_files=True)
-
-    if uploaded_files:
-        if st.sidebar.button("💾 Process & Save Data", type="primary"):
-            c_df, m_df = process_uploaded_files(uploaded_files)
-            st.session_state.stored_callout_df = c_df
-            st.session_state.stored_mis_df = m_df
-            
-            c_df.to_pickle(CALLOUT_PATH)
-            m_df.to_pickle(MIS_PATH)
-            
-            st.sidebar.success("Data successfully loaded and saved permanently!")
-            st.rerun()
-
-    if st.sidebar.button("🗑️ Remove Data", type="secondary"):
-        st.session_state.stored_callout_df = pd.DataFrame()
-        st.session_state.stored_mis_df = pd.DataFrame()
-        
-        if os.path.exists(CALLOUT_PATH): os.remove(CALLOUT_PATH)
-        if os.path.exists(MIS_PATH): os.remove(MIS_PATH)
-            
-        st.sidebar.warning("Data has been removed.")
-        st.rerun()
-
-    st.sidebar.markdown("---")
-    st.sidebar.header("📊 Dashboard Navigation")
-    app_mode = st.sidebar.selectbox("Choose View", ["Main MIS Dashboard", "Callout Summary", "Staff Login Portal"])
-
-    callout_df = st.session_state.stored_callout_df
-    mis_df = st.session_state.stored_mis_df
-
-    if mis_df.empty and callout_df.empty:
-        st.info("Kripya sidebar mein files upload karke 'Process & Save Data' button par click karein.")
-        return
-
-    if app_mode == "Main MIS Dashboard":
-        st.header("📈 Main MIS Performance Dashboard")
-        if not mis_df.empty:
-            show_reported_vehicle_table(mis_df, unique_key="main_dashboard")
-        else:
-            st.warning("Koi MIS data available nahi hai.")
-
-    elif app_mode == "Callout Summary":
-        st.header("⚠️ Callout / Breakdown Summary")
-        if not callout_df.empty:
-            st.metric("TOTAL CALLOUT COUNT", len(callout_df))
-            st.markdown(render_html_table(callout_df), unsafe_allow_html=True)
-        else:
-            st.info("Koi Callout data available nahi hai.")
-
-    elif app_mode == "Staff Login Portal":
-        st.header("🔒 Staff Login Portal")
-        staff_col = next((c for c in mis_df.columns if 'controlling' in c.lower() or 'staff' in c.lower()), None)
-        if staff_col and not mis_df.empty:
-            staff_names = sorted([str(x).strip() for x in mis_df[staff_col].dropna().unique() if str(x).strip() != ""])
-            selected_staff = st.selectbox("Select Staff Member", staff_names)
-            if selected_staff:
-                show_reported_vehicle_table(mis_df, unique_key="staff_portal", staff_filter=selected_staff)
-        else:
-            st.warning("Controlling Staff column nahi mila ya MIS data khali hai.")
-
-if __name__ == '__main__':
-    main()
+                    elif selected_remarks_filter == "Delay + With Remarks" and is_delayed and not is_
