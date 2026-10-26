@@ -227,28 +227,25 @@ def render_smart_insights(df, late_col, client_col):
             top_client_count = delayed_vehicles[client_col].value_counts().iloc[0]
             top_client_str = f"Client <strong>{top_client}</strong> is heavily impacted, experiencing <strong>{top_client_count}</strong> delays."
 
-    # Generate HTML Output
-    st.markdown(f"""
-    <div class="smart-panel">
-        <div class="smart-title">📊 Smart Auto-Insights Engine</div>
-        <div style="color:#8892b0; font-size:13.5px; margin-bottom:15px;">Live analysis generated directly from current filters without external APIs.</div>
-        
-        <div class="smart-bullet">
-            <span style="font-size:18px;">🚦</span> 
-            <span><strong>Performance Overview:</strong> Out of {total_vehicles} total tracked trips, <strong>{delay_count}</strong> are currently running late. This represents a delay rate of <strong>{delay_percentage}%</strong>.</span>
-        </div>
-        
-        <div class="smart-bullet">
-            <span style="font-size:18px;">🛣️</span> 
-            <span><strong>Route Alert:</strong> {top_route_str}</span>
-        </div>
-        
-        <div class="smart-bullet">
-            <span style="font-size:18px;">🏢</span> 
-            <span><strong>Vendor Impact:</strong> {top_client_str}</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    # Generate HTML Output - NO LEADING SPACES to prevent code block parsing
+    html_out = f"""<div class="smart-panel">
+<div class="smart-title">📊 Smart Auto-Insights Engine</div>
+<div style="color:#8892b0; font-size:13.5px; margin-bottom:15px;">Live analysis generated directly from current filters without external APIs.</div>
+<div class="smart-bullet">
+<span style="font-size:18px;">🚦</span>
+<span><strong>Performance Overview:</strong> Out of {total_vehicles} total tracked trips, <strong>{delay_count}</strong> are currently running late. This represents a delay rate of <strong>{delay_percentage}%</strong>.</span>
+</div>
+<div class="smart-bullet">
+<span style="font-size:18px;">🛣️</span>
+<span><strong>Route Alert:</strong> {top_route_str}</span>
+</div>
+<div class="smart-bullet">
+<span style="font-size:18px;">🏢</span>
+<span><strong>Vendor Impact:</strong> {top_client_str}</span>
+</div>
+</div>"""
+    
+    st.markdown(html_out, unsafe_allow_html=True)
 
 
 # ================= REPORTED VEHICLE TABLE & REPORTS =================
