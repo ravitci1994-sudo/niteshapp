@@ -5,7 +5,6 @@ import math
 import io
 import os
 import html as html_lib
-import numpy as np
 
 # 1. Page Configuration
 st.set_page_config(page_title="Sales Manager Live Monitoring Dashboard", layout="wide", initial_sidebar_state="expanded")
@@ -113,20 +112,25 @@ st.markdown("""
         color: white !important;
         transition: all 0.3s ease;
     }
-    
-    /* AI Metric Cards */
-    .ai-card {
-        background: rgba(17, 34, 64, 0.7);
-        backdrop-filter: blur(5px);
-        border-radius: 12px;
-        padding: 20px;
-        margin-bottom: 20px;
-        border-top: 3px solid #f72585;
-        box-shadow: 0 8px 20px rgba(0,0,0,0.4);
-        transition: transform 0.3s ease;
+    .stSelectbox div[data-baseweb="select"] > div:hover {
+        border: 1px solid #f72585 !important;
+        box-shadow: 0 0 10px rgba(247, 37, 133, 0.2);
     }
-    .ai-card:hover { transform: translateY(-5px); border-top: 3px solid #48cae4; }
-    .ai-title { color: #64ffda; font-size: 16px; font-weight: bold; margin-bottom: 10px; text-transform: uppercase;}
+    
+    /* Glowing Buttons */
+    .stButton > button {
+        background: linear-gradient(90deg, #f72585, #7209b7) !important;
+        border: none !important;
+        color: white !important;
+        border-radius: 8px !important;
+        font-weight: 700 !important;
+        transition: all 0.3s ease !important;
+        box-shadow: 0 4px 15px rgba(247, 37, 133, 0.3) !important;
+    }
+    .stButton > button:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 25px rgba(247, 37, 133, 0.6) !important;
+    }
 
     /* Modern Tables */
     .custom-table-container {
@@ -136,12 +140,20 @@ st.markdown("""
         background-color: rgba(10, 25, 47, 0.7);
         box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         margin-bottom: 20px;
+        animation: fadeUp 1s ease-out both;
         backdrop-filter: blur(5px);
     }
     .custom-table { width: 100%; border-collapse: collapse; font-size: 13.5px; white-space: nowrap; }
-    .custom-table th { background: rgba(17, 34, 64, 0.95); color: #48cae4; padding: 14px 16px; text-align: left; position: sticky; top: 0; font-weight: 800; z-index: 1; border-bottom: 2px solid #f72585;}
-    .custom-table td { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); color: #8892b0; }
-    .custom-table tr:hover td { background-color: rgba(72, 202, 228, 0.08); color: #48cae4; }
+    .custom-table th { 
+        background: rgba(17, 34, 64, 0.95); color: #48cae4; 
+        padding: 14px 16px; text-align: left; position: sticky; top: 0; 
+        font-weight: 800; z-index: 1; border-bottom: 2px solid #f72585;
+    }
+    .custom-table td { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); color: #8892b0; transition: all 0.2s ease;}
+    .custom-table tr:hover td { background-color: rgba(72, 202, 228, 0.08); color: #48cae4; transform: scale(1.002); }
+    
+    @keyframes slideDown { 0% { transform: translateY(-20px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+    @keyframes fadeUp { 0% { transform: translateY(20px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
     </style>
 """, unsafe_allow_html=True)
 
@@ -249,176 +261,6 @@ def render_news_ticker(df):
 <div class="ticker-text-wrapper">{full_text}</div>
 </div>"""
     st.markdown(html_out, unsafe_allow_html=True)
-
-
-# ================= 🔥 10 LOCAL AI FEATURES ENGINE 🔥 =================
-def render_10x_ai_engine(df):
-    st.markdown("<h2 style='color:#64ffda;'>🤖 10x Local AI Engine (No API Required)</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='color:#8892b0;'>These 10 smart analytics features run directly on your data using built-in algorithms.</p>", unsafe_allow_html=True)
-    
-    if df.empty:
-        st.warning("Data upload karein AI chalane ke liye.")
-        return
-
-    late_col = next((c for c in ['Late Hrs', 'Delay Hrs', 'Delay'] if c in df.columns), None)
-    remark_col = next((c for c in ['Tracking Remark', 'Remark', 'Remarks'] if c in df.columns), None)
-    staff_col = next((c for c in df.columns if 'controlling' in c.lower() or 'staff' in c.lower()), None)
-    client_col = vendor_column(df)
-    lorry_col = next((c for c in df.columns if c.lower().strip() in ['lorry no.', 'lorry no', 'vehicle no', 'vehicle', 'truck']), None)
-    
-    from_col = next((c for c in df.columns if c.lower().strip() in ['from', 'source', 'origin']), None)
-    dest_col = next((c for c in df.columns if c.lower().strip() in ['destination', 'to']), None)
-    
-    df_ai = df.copy()
-    if late_col:
-        df_ai['Is_Delay'] = ~df_ai[late_col].apply(is_zero_late)
-        df_ai['Delay_Mins'] = df_ai[late_col].apply(get_delay_minutes)
-    else:
-        df_ai['Is_Delay'] = False
-        df_ai['Delay_Mins'] = 0
-
-    if from_col and dest_col:
-        df_ai['Route'] = df_ai[from_col].astype(str).str.strip() + " ➔ " + df_ai[dest_col].astype(str).str.strip()
-    else:
-        df_ai['Route'] = "Unknown"
-
-    total_trips = len(df_ai)
-    delayed_trips = df_ai['Is_Delay'].sum()
-
-    col1, col2 = st.columns(2)
-
-    # 1. NLP Root Cause Analyzer
-    with col1:
-        st.markdown('<div class="ai-card"><div class="ai-title">1. 📝 NLP Root Cause Analyzer</div>', unsafe_allow_html=True)
-        if remark_col:
-            remarks_text = " ".join(df_ai[remark_col].dropna().astype(str).str.lower())
-            causes = {
-                "Traffic / RTO": sum(1 for w in ["traffic", "rto", "challan", "police", "jam"] if w in remarks_text),
-                "Breakdown / Repair": sum(1 for w in ["breakdown", "puncture", "repair", "mechanic", "tyre"] if w in remarks_text),
-                "Driver Issue": sum(1 for w in ["driver", "not responding", "sleep", "phone"] if w in remarks_text),
-                "Loading / Client": sum(1 for w in ["load", "unload", "client", "wait"] if w in remarks_text)
-            }
-            top_cause = max(causes, key=causes.get) if any(causes.values()) else "No specific pattern"
-            st.write(f"**Top Delay Reason:** {top_cause}")
-            st.bar_chart(pd.DataFrame.from_dict(causes, orient='index', columns=['Count']))
-        else:
-            st.write("No Remarks column found.")
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    # 2. Route Risk Predictor
-    with col2:
-        st.markdown('<div class="ai-card"><div class="ai-title">2. 🛣️ Route Risk Predictor</div>', unsafe_allow_html=True)
-        route_risk = df_ai.groupby('Route')['Is_Delay'].mean() * 100
-        route_risk = route_risk[df_ai.groupby('Route').size() > 2].sort_values(ascending=False).head(3)
-        if not route_risk.empty:
-            for route, risk in route_risk.items():
-                st.write(f"🚨 **{route}**: {risk:.1f}% Risk of Delay")
-        else:
-            st.write("Not enough data to predict route risk.")
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    col3, col4 = st.columns(2)
-
-    # 3. Smart Anomaly Detection
-    with col3:
-        st.markdown('<div class="ai-card"><div class="ai-title">3. 🚩 Smart Anomaly Detection</div>', unsafe_allow_html=True)
-        if df_ai['Delay_Mins'].max() > 0:
-            threshold = df_ai['Delay_Mins'].quantile(0.95)
-            anomalies = df_ai[df_ai['Delay_Mins'] >= threshold]
-            st.error(f"Found {len(anomalies)} trips taking unusually high time (Top 5% Outliers).")
-            if lorry_col:
-                st.write("Check Vehicles:", ", ".join(anomalies[lorry_col].astype(str).head(3).tolist()) + "...")
-        else:
-            st.write("No anomalies detected.")
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    # 4. Client Clustering AI
-    with col4:
-        st.markdown('<div class="ai-card"><div class="ai-title">4. 🏢 Client Risk Clustering</div>', unsafe_allow_html=True)
-        if client_col:
-            c_group = df_ai.groupby(client_col).agg(Total=('Is_Delay', 'count'), Delays=('Is_Delay', 'sum'))
-            c_group['Risk'] = (c_group['Delays'] / c_group['Total']) * 100
-            high_risk = len(c_group[c_group['Risk'] > 50])
-            mod_risk = len(c_group[(c_group['Risk'] > 20) & (c_group['Risk'] <= 50)])
-            safe = len(c_group[c_group['Risk'] <= 20])
-            st.write(f"🔴 **High Risk Clients:** {high_risk}")
-            st.write(f"🟡 **Moderate Risk Clients:** {mod_risk}")
-            st.write(f"🟢 **Safe Clients:** {safe}")
-        else:
-            st.write("Client column not found.")
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    col5, col6 = st.columns(2)
-
-    # 5. Staff Efficiency Scoring
-    with col5:
-        st.markdown('<div class="ai-card"><div class="ai-title">5. 👨‍💼 Staff Efficiency Score</div>', unsafe_allow_html=True)
-        if staff_col:
-            s_group = df_ai.groupby(staff_col)['Is_Delay'].mean()
-            s_eff = (1 - s_group) * 100
-            best_staff = s_eff.idxmax()
-            st.success(f"🏆 **Top Performer:** {best_staff} ({s_eff.max():.1f}/100 Score)")
-            st.write("Bottom Performers need routing assistance.")
-        else:
-            st.write("Staff column not found.")
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    # 6. Vehicle Reliability Index
-    with col6:
-        st.markdown('<div class="ai-card"><div class="ai-title">6. 🚛 Vehicle Reliability Index</div>', unsafe_allow_html=True)
-        if lorry_col:
-            v_group = df_ai[df_ai['Is_Delay'] == True].groupby(lorry_col).size().sort_values(ascending=False)
-            if not v_group.empty and v_group.iloc[0] > 1:
-                st.warning(f"⚠️ Vehicle **{v_group.index[0]}** has delayed {v_group.iloc[0]} times. Needs maintenance check!")
-            else:
-                st.write("All vehicles are running within normal reliability bounds.")
-        else:
-            st.write("Vehicle No. column not found.")
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    col7, col8 = st.columns(2)
-
-    # 7. Time-Series Trend Forecasting
-    with col7:
-        st.markdown('<div class="ai-card"><div class="ai-title">7. 📅 Delay Day Forecasting</div>', unsafe_allow_html=True)
-        final_rep_col = next((c for c in ['Final Touching Reporting Date & Time', 'Reporting Date & Time', 'Desp. Date & Time'] if c in df_ai.columns), None)
-        if final_rep_col:
-            df_ai['Parsed_Date'] = pd.to_datetime(df_ai[final_rep_col], errors='coerce', dayfirst=True)
-            df_ai['Day_of_Week'] = df_ai['Parsed_Date'].dt.day_name()
-            day_delays = df_ai[df_ai['Is_Delay'] == True]['Day_of_Week'].value_counts()
-            if not day_delays.empty:
-                st.write(f"📉 **Forecast:** Expect highest delays on **{day_delays.index[0]}s**.")
-                st.bar_chart(day_delays)
-            else:
-                st.write("No date trends found.")
-        else:
-            st.write("Date column not found.")
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    # 8. Data Health Score
-    with col8:
-        st.markdown('<div class="ai-card"><div class="ai-title">8. 🩺 Data Quality Score</div>', unsafe_allow_html=True)
-        missing_cells = df_ai.isnull().sum().sum()
-        total_cells = df_ai.shape[0] * df_ai.shape[1]
-        health_score = 100 - ((missing_cells / total_cells) * 100) if total_cells > 0 else 0
-        st.write(f"📊 **Data Health:** {health_score:.1f}%")
-        if health_score > 90: st.success("Data quality is excellent.")
-        elif health_score > 70: st.warning("Some remarks/dates are missing.")
-        else: st.error("Poor data entry. Please ensure drivers input all touching times.")
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    # 9. Smart Auto-Summary & 10. AI Action Plan
-    st.markdown('<div class="ai-card"><div class="ai-title">9 & 10. 🧠 Smart Summary & Action Plan</div>', unsafe_allow_html=True)
-    summary_text = f"Out of {total_trips} trips, {delayed_trips} are delayed. "
-    if delayed_trips > 0 and 'route_risk' in locals() and not route_risk.empty:
-        action_text = f"👉 **Action Required:** Immediate route diversion needed for {route_risk.index[0]}. Client coordination needed for high-risk vendors."
-    elif delayed_trips == 0:
-        action_text = "👉 **Action Required:** No action needed. Fleet is 100% on time."
-    else:
-        action_text = "👉 **Action Required:** Review the specific delayed vehicles manually."
-    st.write(f"**Summary:** {summary_text}")
-    st.write(action_text)
-    st.markdown('</div>', unsafe_allow_html=True)
 
 
 # ================= REPORTED VEHICLE TABLE & REPORTS =================
@@ -617,6 +459,7 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
         veh_staff_list = ["ALL"] + sorted([str(x).strip() for x in temp_veh_df[staff_col].dropna().unique() if str(x).strip() != ""]) if staff_col else ["ALL"]
         veh_client_list = ["ALL"] + sorted([str(x).strip() for x in temp_veh_df[client_col_name].dropna().unique() if str(x).strip() != ""]) if client_col_name in temp_veh_df.columns else ["ALL"]
         
+        # 🔥 NEW: FREQUENCY FILTER OPTIONS
         freq_options = ["ALL", "> 1 Delay", "> 2 Delays", "> 3 Delays", "> 4 Delays", "> 5 Delays"]
         
         with v_f1: sel_veh_staff = st.selectbox("👨‍💼 Controlling Staff:", veh_staff_list, key=f"vs_{unique_key}")
@@ -636,6 +479,7 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
 
         veh_groups = veh_df.groupby([lorry_col, 'Route']).agg(Total=('Is_OnTime', 'count'), OnTime=('Is_OnTime', 'sum'), Delay=('Is_Delay', 'sum')).reset_index()
         
+        # 🔥 APPLYING THE DELAY FREQUENCY FILTER HERE
         if sel_veh_freq != "ALL":
             if sel_veh_freq == "> 1 Delay": veh_groups = veh_groups[veh_groups['Delay'] > 1]
             elif sel_veh_freq == "> 2 Delays": veh_groups = veh_groups[veh_groups['Delay'] > 2]
@@ -699,9 +543,10 @@ def main():
     if 'stored_mis_df' not in st.session_state: st.session_state.stored_mis_df = pd.read_pickle(MIS_PATH) if os.path.exists(MIS_PATH) else pd.DataFrame()
     if 'stored_callout_df' not in st.session_state: st.session_state.stored_callout_df = pd.read_pickle(CALLOUT_PATH) if os.path.exists(CALLOUT_PATH) else pd.DataFrame()
 
+    # 🔥 CALLING THE SLOW NEWS TICKER
     render_news_ticker(st.session_state.stored_mis_df)
 
-    st.sidebar.markdown("<h2 style='color:#64ffda; font-size:18px; margin-top:10px;'>📁 Data Management</h2>", unsafe_allow_html=True)
+    st.sidebar.markdown("<h2 style='color:#64ffda; font-size:18px; margin-top:20px;'>📁 Data Management</h2>", unsafe_allow_html=True)
     uploaded_files = st.sidebar.file_uploader("Upload MIS/Callout (Excel/CSV)", type=["xlsx", "csv"], accept_multiple_files=True)
 
     if uploaded_files and st.sidebar.button("💾 Process & Save Data", type="primary"):
@@ -723,7 +568,7 @@ def main():
     st.sidebar.markdown("---")
     st.sidebar.markdown("<h2 style='color:#64ffda; font-size:18px;'>📊 Application Views</h2>", unsafe_allow_html=True)
     
-    app_mode = st.sidebar.selectbox("Navigate To:", ["Main MIS Dashboard", "🤖 10x Local AI Engine", "Callout Summary", "Staff Login Portal"])
+    app_mode = st.sidebar.selectbox("Navigate To:", ["Main MIS Dashboard", "Callout Summary", "Staff Login Portal"])
 
     callout_df = st.session_state.stored_callout_df
     mis_df = st.session_state.stored_mis_df
@@ -737,12 +582,6 @@ def main():
             show_reported_vehicle_table(mis_df, unique_key="main")
         else:
             st.warning("Koi MIS data available nahi hai.")
-
-    elif app_mode == "🤖 10x Local AI Engine":
-        if not mis_df.empty:
-            render_10x_ai_engine(mis_df)
-        else:
-            st.warning("Data required to run AI.")
 
     elif app_mode == "Callout Summary":
         st.markdown("<h2 style='color:#f72585;'>⚠️ Callout / Breakdown Summary</h2>", unsafe_allow_html=True)
