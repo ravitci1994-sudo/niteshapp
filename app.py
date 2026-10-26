@@ -408,6 +408,38 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
     excel_bytes_reported = to_excel_bytes({'Reported_Vehicles': final_report_df})
     st.download_button(label=f"📥 Download Filtered Excel", data=excel_bytes_reported, file_name="Reported_Vehicles.xlsx", mime=EXCEL_MIME, type="primary", key=f"dl_{unique_key}")
 
+    # ================= 🔥 NEW: CLIENT-WISE PERFORMANCE SECTION 🔥 =================
+    st.markdown("<br><h3 style='color:#f72585; font-size:22px; margin-bottom:15px;'>🏢 Client-wise Performance Summary</h3>", unsafe_allow_html=True)
+    if client_col_name and client_col_name in filtered_report_df.columns and late_col:
+        client_df = filtered_report_df.copy()
+        client_df['Is_OnTime'] = client_df[late_col].apply(is_zero_late)
+        client_df['Is_Delay'] = ~client_df[late_col].apply(is_zero_late)
+        
+        client_summary = client_df.groupby(client_col_name).agg(
+            Total=('Is_OnTime', 'count'),
+            OnTime=('Is_OnTime', 'sum'),
+            Delay=('Is_Delay', 'sum')
+        ).reset_index()
+        
+        client_summary['On-Time %'] = client_summary.apply(
+            lambda r: f"{round((r['OnTime'] / r['Total']) * 100, 1)}%" if r['Total'] > 0 else "0.0%", axis=1
+        )
+        client_summary = client_summary.rename(columns={
+            client_col_name: 'Client Name',
+            'Total': 'Total Trips',
+            'OnTime': 'On-Time Trips',
+            'Delay': 'Delay Trips'
+        }).sort_values(by='Total Trips', ascending=False)
+        
+        client_summary.insert(0, 'S.No', range(1, 1 + len(client_summary)))
+        
+        st.markdown(render_html_table(client_summary), unsafe_allow_html=True)
+        
+        excel_bytes_client = to_excel_bytes({'Client_Performance': client_summary})
+        st.download_button(label="📥 Download Client Performance", data=excel_bytes_client, file_name="Client_Performance.xlsx", mime=EXCEL_MIME, type="secondary", key=f"dl_client_{unique_key}")
+    else:
+        st.info("Client-wise performance ka data yahan available nahi hai.")
+
     if staff_filter: return
 
     # ================= VEHICLE-WISE PERFORMANCE SECTION =================
