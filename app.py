@@ -367,23 +367,6 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
         # Remarks Filter Logic Implementation
         if selected_remarks_filter != "ALL":
             if remark_col:
-                def check_remark_condition(r_val):
-                    is_empty = is_blank(r_val)
-                    is_delayed = True
-                    if late_col:
-                        is_delayed = not is_zero_late(filtered_report_df.loc[r_val.name, late_col]) if hasattr(r_val, 'name') and r_val.name in filtered_report_df.index else True
-                    
-                    if selected_remarks_filter == "With Remarks":
-                        return not is_empty
-                    elif selected_remarks_filter == "Without Remarks (Empty)":
-                        return is_empty
-                    elif selected_remarks_filter == "Delay + Without Remarks (Empty)":
-                        return is_delayed and is_empty
-                    elif selected_remarks_filter == "Delay + With Remarks":
-                        return is_delayed and (not is_empty)
-                    return True
-
-                # Apply row by row for accurate index matching with delay state
                 valid_indices = []
                 for idx, row in filtered_report_df.iterrows():
                     r_val = row.get(remark_col, None)
@@ -413,8 +396,36 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
         st.info(f"Selected filter ke liye koi Reported Vehicle data nahi mila.")
         return
 
-    display_cols = [c for c in filtered_report_df.columns if not c.startswith('_') and c not in ['Parsed_Date', 'Status_Category', 'MonthKey']]
-    final_report_df = filtered_report_df[display_cols].copy()
+    # EXACT USER SPECIFIED COLUMNS FILTERING
+    desired_cols = [
+        'Lorry No.', 'Veh.Type', 'From', 'Destination', 'Party', 'Desp. Date & Time',
+        'Hrs. Given', '1st Touching', '1st Touching Reporting Date & Time', 
+        '1st Touching Delivery Date & Time', '1st Touching Hrs.', '2nd Touching', 
+        '2nd Touching Reporting Date & Time', '2nd Touching Delivery Date & Time', 
+        '2nd Touching Hrs.', 'Final Touching Reporting Date & Time', 
+        'Total Touching Hrs.', 'Hrs. Taken with touching', 'Hrs. Taken without touching (Dly.)', 
+        'Late Hrs', 'Tracking Remark', 'Group Name', 'Controlling Staff Name', 'Foreman Name'
+    ]
+
+    actual_display_cols = []
+    for col in desired_cols:
+        matched_c = next((c for c in filtered_report_df.columns if c.lower().strip() == col.lower().strip()), None)
+        if matched_c:
+            actual_display_cols.append(matched_c)
+        else:
+            # Fallback check for variations
+            if col == 'Tracking Remark':
+                rem_alt = next((c for c in filtered_report_df.columns if 'remark' in c.lower()), None)
+                if rem_alt: actual_display_cols.append(rem_alt)
+            elif col == 'Party':
+                party_alt = vendor_column(filtered_report_df)
+                if party_alt: actual_display_cols.append(party_alt)
+
+    # Fallback if none matched
+    if not actual_display_cols:
+        actual_display_cols = [c for c in filtered_report_df.columns if not c.startswith('_')]
+
+    final_report_df = filtered_report_df[actual_display_cols].copy()
     final_report_df.insert(0, 'S.No', range(1, 1 + len(final_report_df)))
 
     st.markdown(render_html_table(final_report_df), unsafe_allow_html=True)
