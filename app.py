@@ -6,12 +6,6 @@ import io
 import os
 import html as html_lib
 
-try:
-    import google.generativeai as genai
-    HAS_GENAI = True
-except ImportError:
-    HAS_GENAI = False
-
 # 1. Page Configuration
 st.set_page_config(page_title="Sales Manager Live Monitoring Dashboard", layout="wide", initial_sidebar_state="expanded")
 
@@ -88,11 +82,11 @@ st.markdown("""
         box-shadow: 0 6px 25px rgba(247, 37, 133, 0.6) !important;
     }
 
-    /* 7. REAL AI Auto-Insights Panel */
-    .ai-panel {
+    /* 7. Built-in Smart Insights Panel */
+    .smart-panel {
         background: rgba(17, 34, 64, 0.7);
         backdrop-filter: blur(10px);
-        border-left: 4px solid #64ffda;
+        border-left: 4px solid #48cae4;
         border-radius: 12px;
         padding: 25px 30px;
         margin: 15px 0 30px 0;
@@ -101,16 +95,16 @@ st.markdown("""
         position: relative;
         overflow: hidden;
     }
-    .ai-title {
-        color: #64ffda; font-size: 20px; font-weight: 900; margin-bottom: 20px;
+    .smart-title {
+        color: #48cae4; font-size: 20px; font-weight: 900; margin-bottom: 20px;
         letter-spacing: 1.5px; text-transform: uppercase; display: flex; align-items: center; gap: 10px;
     }
-    .ai-bullet {
+    .smart-bullet {
         color: #e6f1ff; font-size: 15px; margin-bottom: 14px; line-height: 1.7;
         display: flex; align-items: flex-start; gap: 12px;
-        background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; border: 1px solid rgba(100,255,218,0.1);
+        background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; border: 1px solid rgba(72,202,228,0.15);
     }
-    .ai-bullet strong { color: #48cae4; }
+    .smart-bullet strong { color: #f72585; }
 
     /* 8. Modern Tables */
     .custom-table-container {
@@ -130,7 +124,7 @@ st.markdown("""
         font-weight: 800; z-index: 1; border-bottom: 2px solid #f72585;
     }
     .custom-table td { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); color: #8892b0; transition: all 0.2s ease;}
-    .custom-table tr:hover td { background-color: rgba(72, 202, 228, 0.08); color: #64ffda; transform: scale(1.002); }
+    .custom-table tr:hover td { background-color: rgba(72, 202, 228, 0.08); color: #48cae4; transform: scale(1.002); }
     
     @keyframes slideDown { 0% { transform: translateY(-20px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
     @keyframes fadeUp { 0% { transform: translateY(20px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
@@ -204,78 +198,57 @@ def to_excel_bytes(sheets):
         for name, frame in sheets.items(): frame.to_excel(writer, index=False, sheet_name=name)
     return buffer_excel.getvalue()
 
-# ================= REAL AI INTEGRATION =================
-def render_premium_ai_copilot(df, late_col, client_col, api_key):
+# ================= BUILT-IN SMART INSIGHTS ENGINE =================
+def render_smart_insights(df, late_col, client_col):
     if df.empty or not late_col: return
     
-    st.markdown('<div class="ai-panel">', unsafe_allow_html=True)
-    st.markdown('<div class="ai-title">🧠 AI EXECUTIVE COPILOT</div>', unsafe_allow_html=True)
-    st.markdown("<p style='color:#8892b0; font-size:14px;'>Utilize Real-Time LLM to generate professional, business-grade operational insights from the currently filtered dataset.</p>", unsafe_allow_html=True)
+    total_vehicles = len(df)
+    delayed_vehicles = df[~df[late_col].apply(is_zero_late)]
+    delay_count = len(delayed_vehicles)
+    delay_percentage = round((delay_count / total_vehicles) * 100, 1) if total_vehicles > 0 else 0
     
-    if st.button("🚀 Generate Advanced AI Analysis"):
-        if not HAS_GENAI:
-            st.error("Please run: `pip install google-generativeai` in your terminal.")
-            st.markdown('</div>', unsafe_allow_html=True)
-            return
-            
-        if not api_key:
-            st.warning("Please enter your Gemini API Key in the sidebar to activate Premium AI features.")
-            st.markdown('</div>', unsafe_allow_html=True)
-            return
-            
-        with st.spinner("Analyzing operational bottlenecks and formatting executive summary..."):
-            try:
-                # 1. Prepare Data Summary for AI
-                total_vehicles = len(df)
-                delayed_vehicles = df[~df[late_col].apply(is_zero_late)]
-                delay_count = len(delayed_vehicles)
-                delay_rate = round((delay_count / total_vehicles) * 100, 1) if total_vehicles > 0 else 0
-                
-                from_col = next((c for c in df.columns if c.lower().strip() in ['from', 'source', 'origin']), None)
-                dest_col = next((c for c in df.columns if c.lower().strip() in ['destination', 'to']), None)
-                
-                top_route_str = "No specific route data"
-                if from_col and dest_col and delay_count > 0:
-                    delayed_routes = delayed_vehicles[from_col].astype(str) + " -> " + delayed_vehicles[dest_col].astype(str)
-                    if not delayed_routes.empty:
-                        top_route = delayed_routes.value_counts().index[0]
-                        top_route_count = delayed_routes.value_counts().iloc[0]
-                        top_route_str = f"{top_route} ({top_route_count} delays)"
-                
-                top_client_str = "No specific client data"
-                if client_col and delay_count > 0:
-                    if not delayed_vehicles[client_col].empty:
-                        top_client = delayed_vehicles[client_col].value_counts().index[0]
-                        top_client_count = delayed_vehicles[client_col].value_counts().iloc[0]
-                        top_client_str = f"{top_client} ({top_client_count} delays)"
+    # Analyze Routes
+    from_col = next((c for c in df.columns if c.lower().strip() in ['from', 'source', 'origin']), None)
+    dest_col = next((c for c in df.columns if c.lower().strip() in ['destination', 'to']), None)
+    
+    top_route_str = "No specific route data available."
+    if from_col and dest_col and delay_count > 0:
+        delayed_routes = delayed_vehicles[from_col].astype(str) + " ➔ " + delayed_vehicles[dest_col].astype(str)
+        if not delayed_routes.empty:
+            top_route = delayed_routes.value_counts().index[0]
+            top_route_count = delayed_routes.value_counts().iloc[0]
+            top_route_str = f"Route <strong>{top_route}</strong> is facing maximum bottlenecks with <strong>{top_route_count}</strong> delayed vehicles."
 
-                # 2. Call Gemini AI
-                genai.configure(api_key=api_key)
-                model = genai.GenerativeModel('gemini-1.5-flash')
-                
-                prompt = f"""
-                You are a Senior Logistics Operations Executive. Analyze the following real-time fleet snapshot and provide a highly professional, 3-bullet executive summary. Use high-end corporate vocabulary (e.g., 'operational efficiency', 'bottleneck', 'risk mitigation'). 
-                
-                DATA SNAPSHOT:
-                - Total Active Trips: {total_vehicles}
-                - Delayed Trips: {delay_count}
-                - Delay Rate: {delay_rate}%
-                - Most Affected Route: {top_route_str}
-                - Most Impacted Client: {top_client_str}
-                
-                OUTPUT FORMAT:
-                Provide EXACTLY 3 bullet points. Wrap each bullet point in this exact HTML structure:
-                <div class='ai-bullet'>✅ <span>Your text here, wrap key metrics in <strong> tags.</span></div>
-                Do not include markdown outside of the HTML. Do not say "Here is your summary". Just output the HTML. Use appropriate emojis for each bullet (replace the ✅).
-                """
-                
-                response = model.generate_content(prompt)
-                st.markdown(response.text, unsafe_allow_html=True)
-                
-            except Exception as e:
-                st.error(f"AI API Error: {e}")
-                
-    st.markdown('</div>', unsafe_allow_html=True)
+    # Analyze Clients
+    top_client_str = "No specific client data available."
+    if client_col and delay_count > 0:
+        if not delayed_vehicles[client_col].empty:
+            top_client = delayed_vehicles[client_col].value_counts().index[0]
+            top_client_count = delayed_vehicles[client_col].value_counts().iloc[0]
+            top_client_str = f"Client <strong>{top_client}</strong> is heavily impacted, experiencing <strong>{top_client_count}</strong> delays."
+
+    # Generate HTML Output
+    st.markdown(f"""
+    <div class="smart-panel">
+        <div class="smart-title">📊 Smart Auto-Insights Engine</div>
+        <div style="color:#8892b0; font-size:13.5px; margin-bottom:15px;">Live analysis generated directly from current filters without external APIs.</div>
+        
+        <div class="smart-bullet">
+            <span style="font-size:18px;">🚦</span> 
+            <span><strong>Performance Overview:</strong> Out of {total_vehicles} total tracked trips, <strong>{delay_count}</strong> are currently running late. This represents a delay rate of <strong>{delay_percentage}%</strong>.</span>
+        </div>
+        
+        <div class="smart-bullet">
+            <span style="font-size:18px;">🛣️</span> 
+            <span><strong>Route Alert:</strong> {top_route_str}</span>
+        </div>
+        
+        <div class="smart-bullet">
+            <span style="font-size:18px;">🏢</span> 
+            <span><strong>Vendor Impact:</strong> {top_client_str}</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 
 # ================= REPORTED VEHICLE TABLE & REPORTS =================
@@ -390,9 +363,8 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
         st.info("No data found for the selected filters.")
         return
 
-    # ================= PREMIUM REAL AI COPILOT =================
-    api_key_from_sidebar = st.session_state.get('gemini_api_key', '')
-    render_premium_ai_copilot(filtered_report_df, late_col, client_col_name, api_key_from_sidebar)
+    # ================= CALL SMART BUILT-IN INSIGHTS =================
+    render_smart_insights(filtered_report_df, late_col, client_col_name)
 
     # EXACT USER SPECIFIED COLUMNS FILTERING
     desired_cols = [
@@ -519,12 +491,7 @@ def main():
     if 'stored_mis_df' not in st.session_state: st.session_state.stored_mis_df = pd.read_pickle(MIS_PATH) if os.path.exists(MIS_PATH) else pd.DataFrame()
     if 'stored_callout_df' not in st.session_state: st.session_state.stored_callout_df = pd.read_pickle(CALLOUT_PATH) if os.path.exists(CALLOUT_PATH) else pd.DataFrame()
 
-    # SIDEBAR: API KEY INPUT (For Premium AI)
-    st.sidebar.markdown("<h2 style='color:#f72585; font-size:18px;'>🔑 AI Configuration</h2>", unsafe_allow_html=True)
-    api_key = st.sidebar.text_input("Gemini API Key (Required for AI)", type="password")
-    if api_key: st.session_state['gemini_api_key'] = api_key
-
-    st.sidebar.markdown("<h2 style='color:#64ffda; font-size:18px; margin-top:20px;'>📁 Data Management</h2>", unsafe_allow_html=True)
+    st.sidebar.markdown("<h2 style='color:#64ffda; font-size:18px; margin-top:10px;'>📁 Data Management</h2>", unsafe_allow_html=True)
     uploaded_files = st.sidebar.file_uploader("Upload MIS/Callout (Excel/CSV)", type=["xlsx", "csv"], accept_multiple_files=True)
 
     if uploaded_files and st.sidebar.button("💾 Process & Save Data", type="primary"):
