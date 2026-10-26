@@ -109,9 +109,8 @@ CALLOUT_PATH = os.path.join(DATA_DIR, "callout.pkl")
 MIS_PATH = os.path.join(DATA_DIR, "mis.pkl")
 
 # ================= STAFF USERS DATABASE =================
-# Yahan aap apne staff ke username, password aur unka exact Controlling Staff Name set kar sakte hain
 STAFF_CREDENTIALS = {
-    "dhananjay": {"password": "123", "staff_name": "DHANANJAY"}, # Apna exact staff name yahan dalein
+    "dhananjay": {"password": "123", "staff_name": "DHANANJAY"},
     "staff2": {"password": "456", "staff_name": "STAFF NAME 2"}
 }
 
@@ -199,10 +198,8 @@ def show_in_transit_table(df, unique_key="", locked_staff=None):
         return
         
     in_transit_df = df[df[final_rep_col].apply(is_blank)].copy()
-    
     staff_col = next((c for c in in_transit_df.columns if 'controlling' in c.lower() or 'staff' in c.lower()), None)
     
-    # Agar staff login hai toh sirf uska data dikhao
     if locked_staff and staff_col:
         in_transit_df = in_transit_df[in_transit_df[staff_col].astype(str).str.strip().str.upper() == locked_staff.upper()]
 
@@ -211,7 +208,6 @@ def show_in_transit_table(df, unique_key="", locked_staff=None):
         return
 
     st.metric("Total In-Transit Vehicles", len(in_transit_df))
-    
     final_it_df = in_transit_df.copy()
     final_it_df.insert(0, 'S.No', range(1, 1 + len(final_it_df)))
     st.markdown(render_html_table(final_it_df), unsafe_allow_html=True)
@@ -220,7 +216,7 @@ def show_in_transit_table(df, unique_key="", locked_staff=None):
     st.download_button(label="📥 Download In-Transit Excel", data=excel_bytes, file_name="In_Transit_Vehicles.xlsx", mime=EXCEL_MIME, type="primary", key=f"dl_it_{unique_key}")
 
 
-# ================= MAIN MIS TABLE =================
+# ================= MAIN MIS TABLE & PERFORMANCE REPORTS =================
 def show_reported_vehicle_table(df, unique_key="", locked_staff=None):
     final_rep_col = next((c for c in ['Final Touching Reporting Date & Time', 'Reporting Date & Time', 'Reporting Date', 'Desp. Date & Time'] if c in df.columns), None)
     if not final_rep_col: final_rep_col = next((c for c in df.columns if 'report' in c.lower() or 'desp' in c.lower() or 'date' in c.lower()), None)
@@ -230,7 +226,6 @@ def show_reported_vehicle_table(df, unique_key="", locked_staff=None):
     staff_col = next((c for c in reported_df.columns if 'controlling' in c.lower() or 'staff' in c.lower()), None)
     client_col_name = vendor_column(reported_df) or 'VendorName'
 
-    # Agar staff logged in hai toh sirf usi ka data filter hoga aur UI par staff filter hide rahega
     if locked_staff and staff_col:
         reported_df = reported_df[reported_df[staff_col].astype(str).str.strip().str.upper() == locked_staff.upper()]
         st.info(f"🔒 Restricted View: Showing records for **{locked_staff}** only.")
@@ -261,10 +256,101 @@ def show_reported_vehicle_table(df, unique_key="", locked_staff=None):
     final_report_df = reported_df.copy()
     final_report_df.insert(0, 'S.No', range(1, 1 + len(final_report_df)))
 
+    # 1. LIVE DATA TABLE
     st.markdown(render_html_table(final_report_df), unsafe_allow_html=True)
     
     excel_bytes = to_excel_bytes({'Reported_Vehicles': final_report_df})
-    st.download_button(label="📥 Download Excel", data=excel_bytes, file_name="Reported_Vehicles.xlsx", mime=EXCEL_MIME, type="primary", key=f"dl_{unique_key}")
+    st.download_button(label="📥 Download Filtered Excel", data=excel_bytes, file_name="Reported_Vehicles.xlsx", mime=EXCEL_MIME, type="primary", key=f"dl_{unique_key}")
+
+    late_col = next((c for c in ['Late Hrs', 'Delay Hrs', 'Delay'] if c in reported_df.columns), None)
+
+    # 2. CLIENT-WISE PERFORMANCE REPORT (NICHE SHOW HOGA)
+    st.markdown("<br><h3 style='color:#f72585; font-size:22px; margin-bottom:15px;'>🏢 Client-wise Performance Report</h3>", unsafe_allow_html=True)
+    if client_col_name and client_col_name in reported_df.columns and late_col:
+        client_df = reported_df.copy()
+        client_df['Is_OnTime'] = client_df[late_col].apply(is_zero_late)
+        client_df['Is_Delay'] = ~client_df[late_col].apply(is_zero_late)
+        
+        client_summary = client_df.groupby(client_col_name).agg(
+            Total=('Is_OnTime', 'count'),
+            OnTime=('Is_OnTime', 'sum'),
+            Delay=('Is_Delay', 'sum')
+        ).reset_index()
+        
+        client_summary['On-Time %'] = client_summary.apply(
+            lambda r: f"{round((r['OnTime'] / r['Total']) * 100, 1)}%" if r['Total'] > 0 else "0.0%", axis=1
+        )
+        client_summary = client_summary.rename(columns={
+            client_col_name: 'Client Name',
+            'Total': 'Total Trips',
+            'OnTime': 'On-Time Trips',
+            'Delay': 'Delay Trips'
+        }).sort_values(by='Total Trips', ascending=False)
+        
+        client_summary.insert(0, 'S.No', range(1, 1 + len(client_summary)))
+        st.markdown(render_html_table(client_summary), unsafe_allow_html=True)
+        
+        excel_client = to_excel_bytes({'Client_Performance': client_summary})
+        st.download_button(label="📥 Download Client Performance", data=excel_client, file_name="Client_Performance.xlsx", mime=EXCEL_MIME, type="secondary", key=f"dl_client_{unique_key}")
+    else:
+        st.info("Client performance data available nahi hai.")
+
+    # 3. VEHICLE-WISE PERFORMANCE REPORT (USKE NICHE SHOW HOGA)
+    st.markdown("<br><h3 style='color:#48cae4; font-size:22px; margin-bottom:15px;'>🚛 Vehicle-wise Performance Report</h3>", unsafe_allow_html=True)
+    
+    lorry_col = next((c for c in reported_df.columns if c.lower().strip() in ['lorry no.', 'lorry no', 'vehicle no', 'vehicle', 'truck']), None)
+    if not lorry_col: lorry_col = next((c for c in reported_df.columns if any(k in c.lower() for k in ['lorry', 'vehicle', 'truck'])) , None)
+    from_col = next((c for c in reported_df.columns if c.lower().strip() in ['from', 'source', 'origin']), None)
+    dest_col = next((c for c in reported_df.columns if c.lower().strip() in ['destination', 'to']), None)
+
+    if lorry_col and late_col:
+        temp_veh_df = reported_df.copy()
+        if from_col and dest_col: temp_veh_df['Route'] = temp_veh_df[from_col].astype(str).str.strip() + " ➔ " + temp_veh_df[dest_col].astype(str).str.strip()
+        else: temp_veh_df['Route'] = "N/A"
+
+        v_f1, v_f2, v_f3, v_f4 = st.columns(4)
+        veh_staff_list = ["ALL"] + sorted([str(x).strip() for x in temp_veh_df[staff_col].dropna().unique() if str(x).strip() != ""]) if staff_col else ["ALL"]
+        veh_client_list = ["ALL"] + sorted([str(x).strip() for x in temp_veh_df[client_col_name].dropna().unique() if str(x).strip() != ""]) if client_col_name in temp_veh_df.columns else ["ALL"]
+        freq_options = ["ALL", "> 1 Delay", "> 2 Delays", "> 3 Delays", "> 4 Delays", "> 5 Delays"]
+        
+        with v_f1: sel_veh_staff = st.selectbox("👨‍💼 Controlling Staff:", veh_staff_list, key=f"vs_{unique_key}")
+        with v_f2: sel_veh_client = st.selectbox("🏢 Client:", veh_client_list, key=f"vc_{unique_key}")
+        with v_f3: sel_veh_freq = st.selectbox("🔄 Delay Frequency:", freq_options, key=f"vf_{unique_key}")
+        with v_f4: sel_veh_status = st.selectbox("⚖️ Delay/On-time:", ["ALL", "Only On-Time", "Only Delay"], key=f"vst_{unique_key}")
+
+        veh_df = temp_veh_df.copy()
+        if sel_veh_staff != "ALL" and staff_col: veh_df = veh_df[veh_df[staff_col].astype(str).str.strip() == sel_veh_staff]
+        if sel_veh_client != "ALL" and client_col_name in veh_df.columns: veh_df = veh_df[veh_df[client_col_name].astype(str).str.strip() == sel_veh_client]
+
+        veh_df['Is_OnTime'] = veh_df[late_col].apply(is_zero_late)
+        veh_df['Is_Delay'] = ~veh_df[late_col].apply(is_zero_late)
+
+        if sel_veh_status == "Only On-Time": veh_df = veh_df[veh_df['Is_OnTime']]
+        elif sel_veh_status == "Only Delay": veh_df = veh_df[veh_df['Is_Delay']]
+
+        veh_groups = veh_df.groupby([lorry_col, 'Route']).agg(Total=('Is_OnTime', 'count'), OnTime=('Is_OnTime', 'sum'), Delay=('Is_Delay', 'sum')).reset_index()
+        
+        if sel_veh_freq != "ALL":
+            if sel_veh_freq == "> 1 Delay": veh_groups = veh_groups[veh_groups['Delay'] > 1]
+            elif sel_veh_freq == "> 2 Delays": veh_groups = veh_groups[veh_groups['Delay'] > 2]
+            elif sel_veh_freq == "> 3 Delays": veh_groups = veh_groups[veh_groups['Delay'] > 3]
+            elif sel_veh_freq == "> 4 Delays": veh_groups = veh_groups[veh_groups['Delay'] > 4]
+            elif sel_veh_freq == "> 5 Delays": veh_groups = veh_groups[veh_groups['Delay'] > 5]
+
+        veh_summary_df = veh_groups.copy()
+        veh_summary_df['On-Time %'] = veh_summary_df.apply(lambda r: f"{round((r['OnTime'] / r['Total']) * 100, 1)}%" if r['Total'] > 0 else "0.0%", axis=1)
+        veh_summary_df = veh_summary_df.rename(columns={lorry_col: 'Vehicle No.', 'Route': 'Route (From ➔ Destination)', 'Total': 'Total Trips', 'OnTime': 'On-Time Trips', 'Delay': 'Delay Trips'})
+        veh_summary_df = veh_summary_df.sort_values(by='Total Trips', ascending=False)
+        veh_summary_df.insert(0, 'S.No', range(1, 1 + len(veh_summary_df)))
+
+        if not veh_summary_df.empty:
+            st.markdown(render_html_table(veh_summary_df), unsafe_allow_html=True)
+            excel_veh = to_excel_bytes({'Vehicle_Performance': veh_summary_df})
+            st.download_button(label="📥 Download Vehicle Performance", data=excel_veh, file_name="Vehicle_Performance.xlsx", mime=EXCEL_MIME, type="primary", key=f"dl_veh_{unique_key}")
+        else:
+            st.info("Vehicle performance ke liye records nahi mile.")
+    else:
+        st.info("Vehicle performance ke liye required columns nahi mile.")
 
 
 # ================= FILE PROCESSING =================
@@ -298,7 +384,6 @@ def main():
 
     render_news_ticker(st.session_state.stored_mis_df)
 
-    # 🔐 LOGIN SYSTEM IN SIDEBAR
     st.sidebar.markdown("<h2 style='color:#64ffda; font-size:18px;'>🔐 User Authentication</h2>", unsafe_allow_html=True)
     
     if 'logged_in_user' not in st.session_state:
@@ -312,7 +397,7 @@ def main():
         if login_type == "Admin (Full Access)":
             adm_pass = st.sidebar.text_input("Admin Password", type="password")
             if st.sidebar.button("Admin Login"):
-                if adm_pass == "admin123": # Yahan aap admin password change kar sakte hain
+                if adm_pass == "admin123":
                     st.session_state.logged_in_user = "Admin"
                     st.session_state.user_role = "admin"
                     st.rerun()
@@ -332,7 +417,6 @@ def main():
                     st.sidebar.error("Invalid Username or Password!")
         return
 
-    # LOGOUT BUTTON
     st.sidebar.success(f"Logged in as: **{st.session_state.logged_in_user.upper()}**")
     if st.sidebar.button("🚪 Logout"):
         st.session_state.logged_in_user = None
@@ -340,7 +424,6 @@ def main():
         st.session_state.staff_name = None
         st.rerun()
 
-    # 📁 DATA MANAGEMENT (ONLY FOR ADMIN)
     if st.session_state.user_role == "admin":
         st.sidebar.markdown("---")
         st.sidebar.markdown("<h2 style='color:#64ffda; font-size:18px;'>📁 Data Management (Admin Only)</h2>", unsafe_allow_html=True)
@@ -376,7 +459,6 @@ def main():
         st.info("👋 Welcome! Please upload your data files in the sidebar.")
         return
 
-    # Staff ke liye locked name, Admin ke liye None (sab dikhega)
     current_locked_staff = st.session_state.staff_name if st.session_state.user_role == "staff" else None
 
     if app_mode == "Main MIS Dashboard":
