@@ -157,18 +157,6 @@ def clean_party(v, keep_other=True):
     return str(v).strip() if keep_other else "Other"
 
 
-def find_col(df, exact=None, contains=None):
-    if exact:
-        for c in df.columns:
-            if c.lower().strip() in exact:
-                return c
-    if contains:
-        for c in df.columns:
-            if any(k in c.lower() for k in contains):
-                return c
-    return None
-
-
 def vendor_column(df):
     return next((c for c in df.columns if any(k in c.lower() for k in ('vendor', 'party', 'client', 'customer'))), None)
 
@@ -222,9 +210,11 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
         parsed_rep_dt = pd.to_datetime(reported_df[final_rep_col], errors='coerce', dayfirst=True)
         reported_df['_Rep_Date_Obj'] = parsed_rep_dt.dt.date
         reported_df['_Rep_Date_Str'] = parsed_rep_dt.dt.strftime('%d-%m-%Y')
+        reported_df['_Month_Str'] = parsed_rep_dt.dt.strftime('%B %Y')
     else:
         reported_df['_Rep_Date_Obj'] = None
         reported_df['_Rep_Date_Str'] = "ALL"
+        reported_df['_Month_Str'] = "ALL"
 
     current_dt = datetime.now().date()
     def get_relative_week_label(row_date):
@@ -242,8 +232,7 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
         elif diff_days <= 28:
             return "Last 4 Weeks"
         else:
-            w_num = (diff_days // 7) + 1
-            return f"Last {w_num} Weeks"
+            return None # Restrict beyond 4 weeks for quick filtering
 
     reported_df['_Rel_Week'] = reported_df['_Rep_Date_Obj'].apply(get_relative_week_label)
 
@@ -254,6 +243,13 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
     )
     date_options = ["ALL"] + valid_dates['_Rep_Date_Str'].tolist()
 
+    valid_months = (
+        reported_df[reported_df['_Rep_Date_Obj'].notna()]
+        .drop_duplicates(subset=['_Month_Str'])
+        .sort_values('_Rep_Date_Obj', ascending=False)
+    )
+    month_options = ["ALL"] + valid_months['_Month_Str'].tolist()
+
     staff_col = next((c for c in reported_df.columns if 'controlling' in c.lower() or 'staff' in c.lower()), None)
     client_col_name = vendor_column(reported_df) or 'VendorName'
 
@@ -263,11 +259,12 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
         selected_client_report = "ALL"
         selected_delay_hours = "ALL"
         selected_remarks_filter = "ALL"
+        selected_month = "ALL"
         selected_date = "ALL"
         delay_filter = "ALL Reported Vehicles"
         selected_weeks = []
     else:
-        f_col1, f_col2, f_col3, f_col4, f_col5, f_col6 = st.columns(6)
+        f_col1, f_col2, f_col3, f_col4, f_col5, f_col6, f_col7 = st.columns(7)
         with f_col1:
             selected_date = st.selectbox(
                 "📅 Filter by Reporting Date:",
@@ -276,13 +273,20 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
                 key=f"reported_date_filter_{unique_key}"
             )
         with f_col2:
+            selected_month = st.selectbox(
+                "🗓️ Filter by Month:",
+                month_options,
+                index=0,
+                key=f"reported_month_filter_{unique_key}"
+            )
+        with f_col3:
             delay_filter = st.selectbox(
                 "🚨 Filter by Delay Status:",
                 ["ALL Reported Vehicles", "Only Delay Vehicles", "Only On-Time Vehicles"],
                 index=0,
                 key=f"reported_delay_filter_{unique_key}"
             )
-        with f_col3:
+        with f_col4:
             staff_list = ["ALL"] + sorted([str(x).strip() for x in reported_df[staff_col].dropna().unique() if str(x).strip() != ""]) if staff_col else ["ALL"]
             selected_staff = st.selectbox(
                 "👨‍💼 Filter by Controlling Staff:",
@@ -290,7 +294,7 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
                 index=0,
                 key=f"reported_staff_filter_{unique_key}"
             )
-        with f_col4:
+        with f_col5:
             client_list = ["ALL"] + sorted([str(x).strip() for x in reported_df[client_col_name].dropna().unique() if str(x).strip() != ""]) if client_col_name in reported_df.columns else ["ALL"]
             selected_client_report = st.selectbox(
                 "🏢 Filter by Client:",
@@ -298,14 +302,14 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
                 index=0,
                 key=f"reported_client_filter_{unique_key}"
             )
-        with f_col5:
+        with f_col6:
             selected_delay_hours = st.selectbox(
                 "⏱️ Filter by Delay Hours:",
                 ["ALL", "Delay < 10 mins", "Delay < 20 mins", "Delay < 30 mins", "Delay < 40 mins", "Delay <= 1 hour"],
                 index=0,
                 key=f"reported_delay_hours_filter_{unique_key}"
             )
-        with f_col6:
+        with f_col7:
             selected_remarks_filter = st.selectbox(
                 "📝 Filter by Remarks:",
                 [
@@ -319,17 +323,16 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
                 key=f"reported_remarks_filter_{unique_key}"
             )
 
-        standard_weeks = ["Last 1 Week", "Last 2 Weeks", "Last 3 Weeks", "Last 4 Weeks"]
-        available_weeks = [w for w in standard_weeks if w in reported_df['_Rel_Week'].unique()]
-        other_weeks = sorted([w for w in reported_df['_Rel_Week'].unique() if w not in standard_weeks and w is not None])
-        all_week_options = available_weeks + other_weeks
+        # Restricted strictly to Last 1, 2, 3, 4 Weeks as requested
+        strict_week_options = ["Last 1 Week", "Last 2 Weeks", "Last 3 Weeks", "Last 4 Weeks"]
+        available_weeks = [w for w in strict_week_options if w in reported_df['_Rel_Week'].unique()]
 
-        if all_week_options:
+        if available_weeks:
             st.markdown("📅 **Filter by Week (Multiple Selection):**")
-            chk_cols = st.columns(min(len(all_week_options), 6))
+            chk_cols = st.columns(len(strict_week_options))
             selected_weeks = []
-            for i, wk in enumerate(all_week_options):
-                with chk_cols[i % len(chk_cols)]:
+            for i, wk in enumerate(strict_week_options):
+                with chk_cols[i]:
                     if st.checkbox(wk, value=False, key=f"chk_rel_week_{unique_key}_{wk}"):
                         selected_weeks.append(wk)
         else:
@@ -342,6 +345,8 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
     if not staff_filter:
         if selected_date != "ALL":
             filtered_report_df = filtered_report_df[filtered_report_df['_Rep_Date_Str'] == selected_date].copy()
+        if selected_month != "ALL":
+            filtered_report_df = filtered_report_df[filtered_report_df['_Month_Str'] == selected_month].copy()
         if selected_weeks:
             filtered_report_df = filtered_report_df[filtered_report_df['_Rel_Week'].isin(selected_weeks)].copy()
         
@@ -413,7 +418,6 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
         if matched_c:
             actual_display_cols.append(matched_c)
         else:
-            # Fallback check for variations
             if col == 'Tracking Remark':
                 rem_alt = next((c for c in filtered_report_df.columns if 'remark' in c.lower()), None)
                 if rem_alt: actual_display_cols.append(rem_alt)
@@ -421,7 +425,6 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
                 party_alt = vendor_column(filtered_report_df)
                 if party_alt: actual_display_cols.append(party_alt)
 
-    # Fallback if none matched
     if not actual_display_cols:
         actual_display_cols = [c for c in filtered_report_df.columns if not c.startswith('_')]
 
