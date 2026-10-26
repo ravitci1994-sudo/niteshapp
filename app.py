@@ -824,21 +824,26 @@ def main():
     st.title("🚀 Sales Manager Live Monitoring Dashboard")
     st.markdown("Upload your MIS or Callout files to view real-time trip performance and statistics.")
 
-    # Initialize Session State & Load Persistent Disk Data if available
-    if 'stored_callout_df' not in st.session_state:
-        if os.path.exists(CALLOUT_PATH):
-            st.session_state.stored_callout_df = pd.read_pickle(CALLOUT_PATH)
-        else:
-            st.session_state.stored_callout_df = pd.DataFrame()
-
-    if 'stored_mis_df' not in st.session_state:
+    # Always check and load persistent disk data first on startup or refresh
+    if 'stored_mis_df' not in st.session_state or st.session_state.stored_mis_df.empty:
         if os.path.exists(MIS_PATH):
-            st.session_state.stored_mis_df = pd.read_pickle(MIS_PATH)
+            try:
+                st.session_state.stored_mis_df = pd.read_pickle(MIS_PATH)
+            except Exception:
+                st.session_state.stored_mis_df = pd.DataFrame()
         else:
             st.session_state.stored_mis_df = pd.DataFrame()
 
-    if 'data_loaded' not in st.session_state:
-        st.session_state.data_loaded = not st.session_state.stored_mis_df.empty or not st.session_state.stored_callout_df.empty
+    if 'stored_callout_df' not in st.session_state or st.session_state.stored_callout_df.empty:
+        if os.path.exists(CALLOUT_PATH):
+            try:
+                st.session_state.stored_callout_df = pd.read_pickle(CALLOUT_PATH)
+            except Exception:
+                st.session_state.stored_callout_df = pd.DataFrame()
+        else:
+            st.session_state.stored_callout_df = pd.DataFrame()
+
+    st.session_state.data_loaded = not st.session_state.stored_mis_df.empty or not st.session_state.stored_callout_df.empty
 
     # Sidebar Controls
     st.sidebar.header("📁 Data Management")
