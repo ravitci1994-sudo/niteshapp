@@ -525,12 +525,9 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
     from_col = next((c for c in reported_df.columns if c.lower().strip() in ['from', 'source', 'origin']), None)
     dest_col = next((c for c in reported_df.columns if c.lower().strip() in ['destination', 'to']), None)
     
-    # --- YAHAN CHANGE KIYA HAI --- 
-    # Taaki sirf 'Group Name' hi pick ho, aur koi code wala column na aaye
     group_col = next((c for c in reported_df.columns if str(c).strip().lower() == 'group name'), None)
     if not group_col:
         group_col = next((c for c in reported_df.columns if 'group' in str(c).lower()), None)
-    # -----------------------------
 
     if lorry_col and late_col:
         temp_veh_df = reported_df.copy()
@@ -705,7 +702,15 @@ def main():
 
     st.sidebar.markdown("---")
     st.sidebar.header("📊 Dashboard Navigation")
-    app_mode = st.sidebar.selectbox("Choose View", ["Main MIS Dashboard", "Callout Summary", "Staff Login Portal"])
+    
+    # --- AI MENU ADDED HERE ---
+    app_mode = st.sidebar.selectbox("Choose View", [
+        "Main MIS Dashboard", 
+        "Callout Summary", 
+        "Staff Login Portal",
+        "🤖 AI Chat with Data",          
+        "🧠 Smart Remarks Analyzer"       
+    ])
 
     callout_df = st.session_state.stored_callout_df
     mis_df = st.session_state.stored_mis_df
@@ -739,6 +744,124 @@ def main():
                 show_reported_vehicle_table(mis_df, unique_key="staff_portal", staff_filter=selected_staff)
         else:
             st.warning("Controlling Staff column nahi mila ya MIS data khali hai.")
+
+    # =========================================================
+    # NEW OPTION 1: 🤖 AI Chat with Data (AI Data Analyst)
+    # =========================================================
+    elif app_mode == "🤖 AI Chat with Data":
+        st.header("🤖 Chat with Your Data (AI Data Analyst)")
+        st.markdown("Apne data se natural language mein sawal pochein (e.g., 'Kaunsa route sabse zyada delay hai?', 'Total callouts kitne hain?')")
+
+        # API Key input in sidebar
+        api_key = st.sidebar.text_input("Enter Gemini API Key", type="password")
+
+        if mis_df.empty and callout_df.empty:
+            st.warning("Pehle sidebar se data upload karein.")
+        elif not api_key:
+            st.info("👈 Please enter your free Gemini API Key in the sidebar to use AI features.")
+            st.markdown("[Get your free Gemini API Key here](https://aistudio.google.com/app/apikey)")
+        else:
+            data_choice = st.radio("Choose Dataset for AI:", ["Reported Vehicle (MIS)", "Callout Summary"])
+            target_df = mis_df.copy() if data_choice == "Reported Vehicle (MIS)" else callout_df.copy()
+
+            user_question = st.text_input("💬 Ask a question about your data:")
+
+            if user_question:
+                with st.spinner("AI is analyzing your data..."):
+                    try:
+                        from langchain_experimental.agents import create_pandas_dataframe_agent
+                        from langchain_google_genai import ChatGoogleGenerativeAI
+                        
+                        llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", google_api_key=api_key, temperature=0)
+                        
+                        agent = create_pandas_dataframe_agent(
+                            llm, 
+                            target_df, 
+                            verbose=True, 
+                            allow_dangerous_code=True,
+                            handle_parsing_errors=True
+                        )
+                        
+                        response = agent.invoke(user_question)
+                        st.success("🤖 AI Answer:")
+                        st.write(response['output'])
+                    except Exception as e:
+                        st.error(f"Error processing AI query (Ensure you pip installed required packages): {e}")
+
+    # =========================================================
+    # NEW OPTION 2: 🧠 Smart Remarks Analyzer (NLP Categorization)
+    # =========================================================
+    elif app_mode == "🧠 Smart Remarks Analyzer":
+        st.header("🧠 AI Smart Remarks Categorization")
+        st.markdown("Raw tracking remarks ko AI ki madad se automatically categories (e.g., Traffic, Breakdown, Driver Issue) mein badlein.")
+
+        api_key = st.sidebar.text_input("Enter Gemini API Key", type="password")
+        
+        remark_col = next((c for c in mis_df.columns if 'remark' in c.lower()), None)
+
+        if mis_df.empty:
+            st.warning("MIS data upload karein.")
+        elif not remark_col:
+            st.warning("Data mein 'Remarks' column nahi mila.")
+        elif not api_key:
+            st.info("👈 Please enter your free Gemini API Key in the sidebar.")
+        else:
+            df_remarks = mis_df[mis_df[remark_col].notna() & (mis_df[remark_col].astype(str).str.strip() != "")].copy()
+            
+            if df_remarks.empty:
+                st.info("Aapke current data mein koi remarks nahi hain.")
+            else:
+                st.write(f"Total rows with remarks: **{len(df_remarks)}**")
+                
+                if st.button("🚀 Analyze Remarks with AI", type="primary"):
+                    try:
+                        import google.generativeai as genai
+                        genai.configure(api_key=api_key)
+                        model = genai.GenerativeModel('gemini-1.5-flash')
+
+                        unique_remarks = df_remarks[remark_col].astype(str).unique().tolist()
+                        remark_mapping = {}
+
+                        progress_bar = st.progress(0)
+                        status_text = st.empty()
+
+                        for i, remark in enumerate(unique_remarks):
+                            status_text.text(f"Analyzing remark {i+1} of {len(unique_remarks)}...")
+                            
+                            prompt = f"""
+                            Analyze the following logistics tracking remark and assign it EXACTLY ONE of the following Root Cause categories:
+                            [Driver Issue, Vehicle Breakdown, Traffic/Route Delay, Client/Loading Delay, RTO/Challan, Unknown/Other]
+                            
+                            Remark: "{remark}"
+                            
+                            Output ONLY the category name. No extra text.
+                            """
+                            try:
+                                response = model.generate_content(prompt)
+                                category = response.text.strip()
+                                remark_mapping[remark] = category
+                            except Exception:
+                                remark_mapping[remark] = "API Error"
+                                
+                            progress_bar.progress((i + 1) / len(unique_remarks))
+                        
+                        status_text.text("Analysis Complete! ✅")
+                        
+                        df_remarks['AI_Root_Cause'] = df_remarks[remark_col].astype(str).map(remark_mapping)
+                        
+                        st.markdown("### 📊 AI Root Cause Distribution")
+                        
+                        col1, col2 = st.columns([1, 2])
+                        with col1:
+                            st.dataframe(df_remarks['AI_Root_Cause'].value_counts().reset_index())
+                        
+                        with col2:
+                            st.bar_chart(df_remarks['AI_Root_Cause'].value_counts())
+                        
+                        st.markdown("### 📝 Detailed Mapping")
+                        st.dataframe(df_remarks[['Lorry No.', remark_col, 'AI_Root_Cause']], use_container_width=True)
+                    except ImportError:
+                        st.error("Please run: pip install google-generativeai")
 
 if __name__ == '__main__':
     main()
