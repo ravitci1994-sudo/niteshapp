@@ -16,6 +16,28 @@ st.markdown("""
         background: linear-gradient(135deg, #070f1e 0%, #151d30 100%);
     }
     
+    /* 🌟 PREMIUM ANIMATED HEADING 🌟 */
+    .premium-title {
+        font-size: 2.8rem;
+        font-weight: 900;
+        text-align: left;
+        background: linear-gradient(to right, #ffffff 0%, #48cae4 20%, #f72585 50%, #48cae4 80%, #ffffff 100%);
+        background-size: 200% auto;
+        color: #fff;
+        background-clip: text;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        animation: textShine 4s linear infinite;
+        margin-bottom: 30px;
+        margin-top: 10px;
+        padding-bottom: 10px;
+    }
+    @keyframes textShine {
+        to {
+            background-position: 200% center;
+        }
+    }
+    
     /* Premium AI Insights Panel */
     .ai-panel {
         background: linear-gradient(120deg, rgba(28,37,65,0.9), rgba(11,19,43,0.9));
@@ -447,7 +469,8 @@ def process_uploaded_files(uploaded_files):
 
 # ================= MAIN APP =================
 def main():
-    st.markdown("<h1>🚀 Sales Manager Live Monitoring Dashboard</h1>", unsafe_allow_html=True)
+    # 🌟 NEW PREMIUM ANIMATED HEADING 🌟
+    st.markdown("<h1 class='premium-title'>🚀 Sales Manager Live Monitoring Dashboard</h1>", unsafe_allow_html=True)
 
     if 'stored_mis_df' not in st.session_state: st.session_state.stored_mis_df = pd.read_pickle(MIS_PATH) if os.path.exists(MIS_PATH) else pd.DataFrame()
     if 'stored_callout_df' not in st.session_state: st.session_state.stored_callout_df = pd.read_pickle(CALLOUT_PATH) if os.path.exists(CALLOUT_PATH) else pd.DataFrame()
@@ -474,7 +497,6 @@ def main():
     st.sidebar.markdown("---")
     st.sidebar.header("📊 Dashboard Navigation")
     
-    # REMOVED CLUNKY AI TABS - Clean & Premium Navigation
     app_mode = st.sidebar.selectbox("Choose View", ["Main MIS Dashboard", "Callout Summary", "Staff Login Portal"])
 
     callout_df = st.session_state.stored_callout_df
