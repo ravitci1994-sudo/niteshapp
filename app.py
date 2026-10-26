@@ -773,6 +773,12 @@ def process_uploaded_files(uploaded_files):
             is_callout = ('callout' in fname) or has_category or ('breakdown' in fname)
 
             if is_callout:
+                # Filter specifically for DHL, Trackon, and Busybees[cite: 8]
+                vendor_c = vendor_column(temp_df)
+                if vendor_c:
+                    temp_df['VendorName'] = temp_df[vendor_c].apply(lambda x: clean_party(x, keep_other=False))
+                    temp_df = temp_df[temp_df['VendorName'].isin(['DHL', 'Trackon', 'Busybees'])].copy()
+
                 cat_col = next((c for c in temp_df.columns if any(kw in c.lower() for kw in ['category', 'cat', 'reason', 'issue'])), None)
                 if cat_col:
                     allowed_keywords = ['breakdown', 'break down', 'accident', 'tyre', 'tire', 'puncture', 'puncher', 'blast']
@@ -782,10 +788,6 @@ def process_uploaded_files(uploaded_files):
                         s = str(val).lower().strip()
                         return any(kw in s for kw in allowed_keywords)
                     temp_df = temp_df[temp_df[cat_col].apply(check_cat)].copy()
-
-                vendor_c = vendor_column(temp_df)
-                if vendor_c:
-                    temp_df['VendorName'] = temp_df[vendor_c].apply(lambda x: clean_party(x, keep_other=True))
 
                 date_col = next((c for c in temp_df.columns if 'date' in c.lower() or 'desp' in c.lower() or 'time' in c.lower()), None)
                 if date_col:
