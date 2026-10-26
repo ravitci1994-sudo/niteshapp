@@ -514,7 +514,7 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
     if staff_filter:
         return
 
-    # ================= TOTAL TRIP CLOSED DATA (CLIENT-WISE SPEEDOMETER) =================
+    # ================= TOTAL TRIP CLOSED DATA (CLIENT-WISE PERFORMANCE) =================
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("## 📊 Total Trip Closed Data (Client-wise Performance)")
     
@@ -529,6 +529,7 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
             Delay=('Is_Delay', 'sum')
         ).reset_index()
         
+        # Display Speedometer Cards
         cols = st.columns(min(len(client_groups), 4) if not client_groups.empty else 1)
         for idx, row in client_groups.iterrows():
             c_name = row[client_col_name]
@@ -539,6 +540,32 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
             
             with cols[idx % len(cols)]:
                 st.markdown(render_speedometer_html(c_name, rate, ot, dl, tot), unsafe_allow_html=True)
+
+        # Display Detailed Summary Table Below Speedometers
+        client_summary_df = client_groups.copy()
+        client_summary_df['On-Time %'] = client_summary_df.apply(
+            lambda r: f"{round((r['OnTime'] / r['Total']) * 100, 1)}%" if r['Total'] > 0 else "0.0%", axis=1
+        )
+        client_summary_df = client_summary_df.rename(columns={
+            client_col_name: 'Client Name',
+            'Total': 'Total Trips',
+            'OnTime': 'On-Time Trips',
+            'Delay': 'Delay Trips'
+        })
+        client_summary_df.insert(0, 'S.No', range(1, 1 + len(client_summary_df)))
+        
+        st.markdown("### 📋 Client-wise Summary Table")
+        st.markdown(render_html_table(client_summary_df), unsafe_allow_html=True)
+        
+        excel_bytes_client = to_excel_bytes({'Client_Performance': client_summary_df})
+        st.download_button(
+            label=f"📥 Download Client Performance Excel",
+            data=excel_bytes_client,
+            file_name="Client_Performance_Summary.xlsx",
+            mime=EXCEL_MIME,
+            type="primary",
+            key=f"download_client_summary_{unique_key}"
+        )
     else:
         st.info("Client-wise summary ke liye required columns nahi mile.")
 
