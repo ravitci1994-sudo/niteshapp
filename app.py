@@ -514,129 +514,75 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
     if staff_filter:
         return
 
-    # ================= TOTAL TRIP CLOSED DATA (CLIENT-WISE PERFORMANCE) =================
+    # ================= VEHICLE-WISE PERFORMANCE SECTION =================
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("## 📊 Total Trip Closed Data (Client-wise Performance)")
-    
-    if client_col_name in reported_df.columns and late_col:
-        temp_stat_df = reported_df.copy()
-        temp_stat_df['Is_OnTime'] = temp_stat_df[late_col].apply(is_zero_late)
-        temp_stat_df['Is_Delay'] = ~temp_stat_df[late_col].apply(is_zero_late)
+    st.markdown("## 🚛 Vehicle-wise Trip Closed Performance")
+
+    lorry_col = next((c for c in reported_df.columns if any(k in c.lower() for k in ['lorry', 'vehicle', 'truck'])) , None)
+
+    if lorry_col and late_col:
+        # 3 Dropdown Filters for Vehicle-wise Section
+        v_f1, v_f2, v_f3 = st.columns(3)
         
-        client_groups = temp_stat_df.groupby(client_col_name).agg(
+        veh_staff_list = ["ALL"] + sorted([str(x).strip() for x in reported_df[staff_col].dropna().unique() if str(x).strip() != ""]) if staff_col else ["ALL"]
+        veh_client_list = ["ALL"] + sorted([str(x).strip() for x in reported_df[client_col_name].dropna().unique() if str(x).strip() != ""]) if client_col_name in reported_df.columns else ["ALL"]
+        veh_status_list = ["ALL", "Only On-Time", "Only Delay"]
+
+        with v_f1:
+            sel_veh_staff = st.selectbox("👨‍💼 Filter by Controlling Staff:", veh_staff_list, index=0, key=f"veh_staff_{unique_key}")
+        with v_f2:
+            sel_veh_client = st.selectbox("🏢 Filter by Client:", veh_client_list, index=0, key=f"veh_client_{unique_key}")
+        with v_f3:
+            sel_veh_status = st.selectbox("⚖️ Filter by Delay and On-time:", veh_status_list, index=0, key=f"veh_status_{unique_key}")
+
+        veh_df = reported_df.copy()
+        if sel_veh_staff != "ALL" and staff_col:
+            veh_df = veh_df[veh_df[staff_col].astype(str).str.strip() == sel_veh_staff].copy()
+        if sel_veh_client != "ALL" and client_col_name in veh_df.columns:
+            veh_df = veh_df[veh_df[client_col_name].astype(str).str.strip() == sel_veh_client].copy()
+
+        veh_df['Is_OnTime'] = veh_df[late_col].apply(is_zero_late)
+        veh_df['Is_Delay'] = ~veh_df[late_col].apply(is_zero_late)
+
+        if sel_veh_status == "Only On-Time":
+            veh_df = veh_df[veh_df['Is_OnTime']].copy()
+        elif sel_veh_status == "Only Delay":
+            veh_df = veh_df[veh_df['Is_Delay']].copy()
+
+        veh_groups = veh_df.groupby(lorry_col).agg(
             Total=('Is_OnTime', 'count'),
             OnTime=('Is_OnTime', 'sum'),
             Delay=('Is_Delay', 'sum')
         ).reset_index()
-        
-        cols = st.columns(min(len(client_groups), 4) if not client_groups.empty else 1)
-        for idx, row in client_groups.iterrows():
-            c_name = row[client_col_name]
-            tot = int(row['Total'])
-            ot = int(row['OnTime'])
-            dl = int(row['Delay'])
-            rate = round((ot / tot) * 100, 1) if tot > 0 else 0.0
-            
-            with cols[idx % len(cols)]:
-                st.markdown(render_speedometer_html(c_name, rate, ot, dl, tot), unsafe_allow_html=True)
 
-        client_summary_df = client_groups.copy()
-        client_summary_df['On-Time %'] = client_summary_df.apply(
+        veh_summary_df = veh_groups.copy()
+        veh_summary_df['On-Time %'] = veh_summary_df.apply(
             lambda r: f"{round((r['OnTime'] / r['Total']) * 100, 1)}%" if r['Total'] > 0 else "0.0%", axis=1
         )
-        client_summary_df = client_summary_df.rename(columns={
-            client_col_name: 'Client Name',
+        veh_summary_df = veh_summary_df.rename(columns={
+            lorry_col: 'Lorry No. / Vehicle',
             'Total': 'Total Trips',
             'OnTime': 'On-Time Trips',
             'Delay': 'Delay Trips'
         })
-        client_summary_df.insert(0, 'S.No', range(1, 1 + len(client_summary_df)))
-        
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("## 📋 Client-wise Summary Table")
-        st.markdown(render_html_table(client_summary_df), unsafe_allow_html=True)
-        
-        excel_bytes_client = to_excel_bytes({'Client_Performance': client_summary_df})
-        st.download_button(
-            label=f"📥 Download Client Performance Excel",
-            data=excel_bytes_client,
-            file_name="Client_Performance_Summary.xlsx",
-            mime=EXCEL_MIME,
-            type="primary",
-            key=f"download_client_summary_{unique_key}"
-        )
+        veh_summary_df = veh_summary_df.sort_values(by='Total Trips', ascending=False)
+        veh_summary_df.insert(0, 'S.No', range(1, 1 + len(veh_summary_df)))
 
-        # ================= ROUTE-WISE PERFORMANCE SECTION =================
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("## 🛣️ Route-wise Performance")
-
-        from_col = next((c for c in reported_df.columns if c.lower().strip() in ['from', 'source', 'origin']), None)
-        dest_col = next((c for c in reported_df.columns if c.lower().strip() in ['destination', 'to']), None)
-        group_col = next((c for c in reported_df.columns if 'group' in c.lower()), None)
-
-        if from_col and dest_col:
-            # Filters for Route-wise performance
-            r_f1, r_f2, r_f3 = st.columns(3)
-            
-            route_staff_list = ["ALL"] + sorted([str(x).strip() for x in reported_df[staff_col].dropna().unique() if str(x).strip() != ""]) if staff_col else ["ALL"]
-            route_client_list = ["ALL"] + sorted([str(x).strip() for x in reported_df[client_col_name].dropna().unique() if str(x).strip() != ""]) if client_col_name in reported_df.columns else ["ALL"]
-            route_group_list = ["ALL"] + sorted([str(x).strip() for x in reported_df[group_col].dropna().unique() if str(x).strip() != ""]) if group_col else ["ALL"]
-
-            with r_f1:
-                sel_route_staff = st.selectbox("👨‍💼 Filter by Controlling Staff:", route_staff_list, index=0, key=f"route_staff_{unique_key}")
-            with r_f2:
-                sel_route_client = st.selectbox("🏢 Filter by Client:", route_client_list, index=0, key=f"route_client_{unique_key}")
-            with r_f3:
-                sel_route_group = st.selectbox("🏷️ Filter by Group Code:", route_group_list, index=0, key=f"route_group_{unique_key}")
-
-            route_df = reported_df.copy()
-            if sel_route_staff != "ALL" and staff_col:
-                route_df = route_df[route_df[staff_col].astype(str).str.strip() == sel_route_staff].copy()
-            if sel_route_client != "ALL" and client_col_name in route_df.columns:
-                route_df = route_df[route_df[client_col_name].astype(str).str.strip() == sel_route_client].copy()
-            if sel_route_group != "ALL" and group_col:
-                route_df = route_df[route_df[group_col].astype(str).str.strip() == sel_route_group].copy()
-
-            route_df['Route'] = route_df[from_col].astype(str).str.strip() + " ➔ " + route_df[dest_col].astype(str).str.strip()
-            route_df['Is_OnTime'] = route_df[late_col].apply(is_zero_late)
-            route_df['Is_Delay'] = ~route_df[late_col].apply(is_zero_late)
-
-            route_groups = route_df.groupby('Route').agg(
-                Total=('Is_OnTime', 'count'),
-                OnTime=('Is_OnTime', 'sum'),
-                Delay=('Is_Delay', 'sum')
-            ).reset_index()
-
-            route_summary_df = route_groups.copy()
-            route_summary_df['On-Time %'] = route_summary_df.apply(
-                lambda r: f"{round((r['OnTime'] / r['Total']) * 100, 1)}%" if r['Total'] > 0 else "0.0%", axis=1
+        if not veh_summary_df.empty:
+            st.markdown(render_html_table(veh_summary_df), unsafe_allow_html=True)
+            excel_bytes_veh = to_excel_bytes({'Vehicle_Performance': veh_summary_df})
+            st.download_button(
+                label=f"📥 Download Vehicle Performance Excel",
+                data=excel_bytes_veh,
+                file_name="Vehicle_Performance_Summary.xlsx",
+                mime=EXCEL_MIME,
+                type="primary",
+                key=f"download_veh_summary_{unique_key}"
             )
-            route_summary_df = route_summary_df.rename(columns={
-                'Route': 'Route (From ➔ Destination)',
-                'Total': 'Total Trips',
-                'OnTime': 'On-Time Trips',
-                'Delay': 'Delay Trips'
-            })
-            route_summary_df = route_summary_df.sort_values(by='Total Trips', ascending=False)
-            route_summary_df.insert(0, 'S.No', range(1, 1 + len(route_summary_df)))
-
-            if not route_summary_df.empty:
-                st.markdown(render_html_table(route_summary_df), unsafe_allow_html=True)
-                excel_bytes_route = to_excel_bytes({'Route_Performance': route_summary_df})
-                st.download_button(
-                    label=f"📥 Download Route Performance Excel",
-                    data=excel_bytes_route,
-                    file_name="Route_Performance_Summary.xlsx",
-                    mime=EXCEL_MIME,
-                    type="primary",
-                    key=f"download_route_summary_{unique_key}"
-                )
-            else:
-                st.info("Route-wise data ke liye koi records nahi mile.")
         else:
-            st.info("Route-wise performance ke liye 'From' aur 'Destination' columns nahi mile.")
+            st.info("Vehicle-wise data ke liye koi records nahi mile.")
     else:
-        st.info("Client-wise summary ke liye required columns nahi mile.")
+        st.info("Vehicle-wise performance ke liye required columns nahi mile.")
 
 
 # ================= FILE PROCESSING =================
