@@ -408,7 +408,7 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
     excel_bytes_reported = to_excel_bytes({'Reported_Vehicles': final_report_df})
     st.download_button(label=f"📥 Download Filtered Excel", data=excel_bytes_reported, file_name="Reported_Vehicles.xlsx", mime=EXCEL_MIME, type="primary", key=f"dl_{unique_key}")
 
-    # ================= 🔥 NEW: CLIENT-WISE PERFORMANCE SECTION 🔥 =================
+    # ================= 🔥 CLIENT-WISE PERFORMANCE SECTION 🔥 =================
     st.markdown("<br><h3 style='color:#f72585; font-size:22px; margin-bottom:15px;'>🏢 Client-wise Performance Summary</h3>", unsafe_allow_html=True)
     if client_col_name and client_col_name in filtered_report_df.columns and late_col:
         client_df = filtered_report_df.copy()
@@ -449,8 +449,6 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
     if not lorry_col: lorry_col = next((c for c in reported_df.columns if any(k in c.lower() for k in ['lorry', 'vehicle', 'truck'])) , None)
     from_col = next((c for c in reported_df.columns if c.lower().strip() in ['from', 'source', 'origin']), None)
     dest_col = next((c for c in reported_df.columns if c.lower().strip() in ['destination', 'to']), None)
-    group_col = next((c for c in reported_df.columns if str(c).strip().lower() == 'group name'), None)
-    if not group_col: group_col = next((c for c in reported_df.columns if 'group' in str(c).lower()), None)
 
     if lorry_col and late_col:
         temp_veh_df = reported_df.copy()
@@ -460,17 +458,18 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
         v_f1, v_f2, v_f3, v_f4 = st.columns(4)
         veh_staff_list = ["ALL"] + sorted([str(x).strip() for x in temp_veh_df[staff_col].dropna().unique() if str(x).strip() != ""]) if staff_col else ["ALL"]
         veh_client_list = ["ALL"] + sorted([str(x).strip() for x in temp_veh_df[client_col_name].dropna().unique() if str(x).strip() != ""]) if client_col_name in temp_veh_df.columns else ["ALL"]
-        veh_group_list = ["ALL"] + sorted([str(x).strip() for x in temp_veh_df[group_col].dropna().unique() if str(x).strip() != ""]) if group_col else ["ALL"]
+        
+        # 🔥 NEW: FREQUENCY FILTER OPTIONS
+        freq_options = ["ALL", "> 1 Delay", "> 2 Delays", "> 3 Delays", "> 4 Delays", "> 5 Delays"]
         
         with v_f1: sel_veh_staff = st.selectbox("👨‍💼 Controlling Staff:", veh_staff_list, key=f"vs_{unique_key}")
         with v_f2: sel_veh_client = st.selectbox("🏢 Client:", veh_client_list, key=f"vc_{unique_key}")
-        with v_f3: sel_veh_group = st.selectbox("🏷️ Group Name:", veh_group_list, key=f"vg_{unique_key}")
+        with v_f3: sel_veh_freq = st.selectbox("🔄 Delay Frequency:", freq_options, key=f"vf_{unique_key}")
         with v_f4: sel_veh_status = st.selectbox("⚖️ Delay/On-time:", ["ALL", "Only On-Time", "Only Delay"], key=f"vst_{unique_key}")
 
         veh_df = temp_veh_df.copy()
         if sel_veh_staff != "ALL" and staff_col: veh_df = veh_df[veh_df[staff_col].astype(str).str.strip() == sel_veh_staff]
         if sel_veh_client != "ALL" and client_col_name in veh_df.columns: veh_df = veh_df[veh_df[client_col_name].astype(str).str.strip() == sel_veh_client]
-        if sel_veh_group != "ALL" and group_col: veh_df = veh_df[veh_df[group_col].astype(str).str.strip() == sel_veh_group]
 
         veh_df['Is_OnTime'] = veh_df[late_col].apply(is_zero_late)
         veh_df['Is_Delay'] = ~veh_df[late_col].apply(is_zero_late)
@@ -479,6 +478,15 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
         elif sel_veh_status == "Only Delay": veh_df = veh_df[veh_df['Is_Delay']]
 
         veh_groups = veh_df.groupby([lorry_col, 'Route']).agg(Total=('Is_OnTime', 'count'), OnTime=('Is_OnTime', 'sum'), Delay=('Is_Delay', 'sum')).reset_index()
+        
+        # 🔥 APPLYING THE DELAY FREQUENCY FILTER HERE
+        if sel_veh_freq != "ALL":
+            if sel_veh_freq == "> 1 Delay": veh_groups = veh_groups[veh_groups['Delay'] > 1]
+            elif sel_veh_freq == "> 2 Delays": veh_groups = veh_groups[veh_groups['Delay'] > 2]
+            elif sel_veh_freq == "> 3 Delays": veh_groups = veh_groups[veh_groups['Delay'] > 3]
+            elif sel_veh_freq == "> 4 Delays": veh_groups = veh_groups[veh_groups['Delay'] > 4]
+            elif sel_veh_freq == "> 5 Delays": veh_groups = veh_groups[veh_groups['Delay'] > 5]
+
         veh_summary_df = veh_groups.copy()
         veh_summary_df['On-Time %'] = veh_summary_df.apply(lambda r: f"{round((r['OnTime'] / r['Total']) * 100, 1)}%" if r['Total'] > 0 else "0.0%", axis=1)
         veh_summary_df = veh_summary_df.rename(columns={lorry_col: 'Vehicle No.', 'Route': 'Route (From ➔ Destination)', 'Total': 'Total Trips', 'OnTime': 'On-Time Trips', 'Delay': 'Delay Trips'})
@@ -487,8 +495,12 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
 
         if not veh_summary_df.empty:
             st.markdown(render_html_table(veh_summary_df), unsafe_allow_html=True)
+            excel_bytes_veh = to_excel_bytes({'Vehicle_Performance': veh_summary_df})
+            st.download_button(label=f"📥 Download Vehicle Performance Excel", data=excel_bytes_veh, file_name="Vehicle_Performance_Summary.xlsx", mime=EXCEL_MIME, type="primary", key=f"download_veh_summary_{unique_key}")
         else:
-            st.info("No records found for Vehicle Performance.")
+            st.info("No records found for Vehicle Performance matching selected frequency.")
+    else:
+        st.info("Vehicle-wise performance ke liye required columns nahi mile.")
 
 
 # ================= FILE PROCESSING =================
