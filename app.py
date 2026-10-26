@@ -53,7 +53,7 @@ st.markdown("""
     }
     @keyframes textShine { to { background-position: 200% center; } }
     
-    /* 🔥 NEWS TICKER ANIMATION CSS 🔥 */
+    /* 🔥 NEWS TICKER ANIMATION CSS (SLOW & READABLE) 🔥 */
     .news-ticker-container {
         width: 100%;
         background: linear-gradient(90deg, #f72585, #7209b7);
@@ -67,7 +67,7 @@ st.markdown("""
         position: relative;
         display: flex;
         align-items: center;
-        height: 40px;
+        height: 45px;
     }
     .ticker-label {
         background: #050b14;
@@ -90,12 +90,13 @@ st.markdown("""
         padding-left: 160px; /* Space for the label */
         display: inline-block;
         white-space: nowrap;
-        animation: marquee 20s linear infinite;
+        /* YAHAN SPEED SLOW KI GAYI HAI (45s instead of 20s) */
+        animation: marquee 45s linear infinite; 
     }
     .ticker-item {
         display: inline-block;
-        padding: 0 50px;
-        font-size: 15px;
+        padding: 0 40px;
+        font-size: 15.5px;
         font-weight: 600;
         letter-spacing: 0.5px;
     }
@@ -248,28 +249,40 @@ def to_excel_bytes(sheets):
         for name, frame in sheets.items(): frame.to_excel(writer, index=False, sheet_name=name)
     return buffer_excel.getvalue()
 
-# ================= NEWS TICKER COMPONENT =================
+# ================= NEWS TICKER COMPONENT (UPDATED CONTENT) =================
 def render_news_ticker(df):
     if df.empty:
         ticker_text = "🟢 SYSTEM READY... WAITING FOR DATA UPLOAD... PLEASE UPLOAD MIS FILE FROM SIDEBAR..."
     else:
         late_col = next((c for c in ['Late Hrs', 'Delay Hrs', 'Delay'] if c in df.columns), None)
+        staff_col = next((c for c in df.columns if 'controlling' in c.lower() or 'staff' in c.lower()), None)
+        client_col = vendor_column(df)
+        
         if late_col:
             total = len(df)
             delayed = len(df[~df[late_col].apply(is_zero_late)])
-            delay_pct = round((delayed / total) * 100, 1) if total > 0 else 0
+            on_time_pct = round(((total - delayed) / total) * 100, 1) if total > 0 else 0
             
-            from_col = next((c for c in df.columns if c.lower().strip() in ['from', 'source', 'origin']), None)
-            dest_col = next((c for c in df.columns if c.lower().strip() in ['destination', 'to']), None)
-            route_text = ""
-            if from_col and dest_col and delayed > 0:
-                del_df = df[~df[late_col].apply(is_zero_late)]
-                routes = del_df[from_col].astype(str) + " ➔ " + del_df[dest_col].astype(str)
-                if not routes.empty:
-                    top_r = routes.value_counts().index[0]
-                    route_text = f" | 🛣️ HIGHEST DELAY ROUTE: {top_r} "
+            # Staff Data Extract
+            staff_text = ""
+            if staff_col:
+                top_staff = df[staff_col].value_counts()
+                if not top_staff.empty:
+                    staff_name = top_staff.index[0]
+                    staff_trips = top_staff.iloc[0]
+                    staff_text = f" | 👨‍💼 TOP STAFF: {staff_name} ({staff_trips} Trips)"
             
-            ticker_text = f"🚀 LIVE FLEET STATUS: Total Active Trips: {total} | ⚠️ Delayed Vehicles: {delayed} ({delay_pct}%){route_text} | ⚡ KEEP MONITORING DASHBOARD FOR REAL-TIME UPDATES "
+            # Client Data Extract
+            client_text = ""
+            if client_col:
+                top_client = df[client_col].value_counts()
+                if not top_client.empty:
+                    client_name = top_client.index[0]
+                    client_trips = top_client.iloc[0]
+                    client_text = f" | 🏢 TOP CLIENT: {client_name} ({client_trips} Trips)"
+            
+            # Combine everything in ticker
+            ticker_text = f"🚀 LIVE PERFORMANCE: Total Trips: {total} | ✅ On-Time: {on_time_pct}% | ⚠️ Delayed: {delayed}{staff_text}{client_text} | ⚡ KEEP MONITORING DASHBOARD FOR REAL-TIME UPDATES"
         else:
             ticker_text = f"🚀 LIVE UPDATE: Total Active Trips: {len(df)} | 🟢 ALL SYSTEMS NORMAL "
 
