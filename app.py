@@ -9,14 +9,33 @@ import html as html_lib
 # 1. Page Configuration
 st.set_page_config(page_title="Sales Manager Live Monitoring Dashboard", layout="wide", initial_sidebar_state="expanded")
 
-# Custom CSS for Premium AI Look & Animations
+# ================= CUSTOM CSS FOR ULTRA-PREMIUM LOOK =================
 st.markdown("""
     <style>
+    /* 1. Global Animated Background */
     .main, [data-testid="stAppViewContainer"] {
-        background: linear-gradient(135deg, #070f1e 0%, #151d30 100%);
+        background: linear-gradient(135deg, #050b14 0%, #0a192f 50%, #050b14 100%);
+        background-size: 200% 200%;
+        animation: gradientBG 15s ease infinite;
+        color: #e6f1ff;
     }
-    
-    /* 🌟 PREMIUM ANIMATED HEADING 🌟 */
+    @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+
+    /* 2. Custom Sleek Scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #050b14; }
+    ::-webkit-scrollbar-thumb { background: rgba(72, 202, 228, 0.5); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #f72585; }
+
+    /* 3. Glassmorphism Sidebar */
+    [data-testid="stSidebar"] {
+        background: rgba(10, 25, 47, 0.85) !important;
+        backdrop-filter: blur(12px) !important;
+        -webkit-backdrop-filter: blur(12px) !important;
+        border-right: 1px solid rgba(72, 202, 228, 0.15);
+    }
+
+    /* 4. Premium Animated Title */
     .premium-title {
         font-size: 2.8rem;
         font-weight: 900;
@@ -28,104 +47,96 @@ st.markdown("""
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         animation: textShine 4s linear infinite;
-        margin-bottom: 30px;
-        margin-top: 10px;
+        margin-bottom: 25px;
+        margin-top: 5px;
         padding-bottom: 10px;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
     }
-    @keyframes textShine {
-        to {
-            background-position: 200% center;
-        }
+    @keyframes textShine { to { background-position: 200% center; } }
+    
+    /* 5. Streamlit Widget Enhancements (Dropdowns & Checkboxes) */
+    .stSelectbox div[data-baseweb="select"] > div {
+        background-color: rgba(28, 37, 65, 0.6) !important;
+        border: 1px solid rgba(72, 202, 228, 0.3) !important;
+        border-radius: 8px !important;
+        color: white !important;
+        transition: all 0.3s ease;
+    }
+    .stSelectbox div[data-baseweb="select"] > div:hover {
+        border: 1px solid #f72585 !important;
+        box-shadow: 0 0 10px rgba(247, 37, 133, 0.2);
     }
     
-    /* Premium AI Insights Panel */
+    /* 6. Glowing Buttons */
+    .stButton > button {
+        background: linear-gradient(90deg, #f72585, #7209b7) !important;
+        border: none !important;
+        color: white !important;
+        border-radius: 8px !important;
+        font-weight: 700 !important;
+        transition: all 0.3s ease !important;
+        box-shadow: 0 4px 15px rgba(247, 37, 133, 0.3) !important;
+    }
+    .stButton > button:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 25px rgba(247, 37, 133, 0.6) !important;
+    }
+
+    /* 7. AI Auto-Insights Panel */
     .ai-panel {
-        background: linear-gradient(120deg, rgba(28,37,65,0.9), rgba(11,19,43,0.9));
+        background: rgba(17, 34, 64, 0.7);
+        backdrop-filter: blur(10px);
         border-left: 4px solid #f72585;
-        border-right: 1px solid rgba(247, 37, 133, 0.3);
-        border-top: 1px solid rgba(247, 37, 133, 0.3);
-        border-bottom: 1px solid rgba(247, 37, 133, 0.3);
-        padding: 20px 25px;
         border-radius: 12px;
-        margin-top: 10px;
-        margin-bottom: 25px;
-        box-shadow: 0 10px 30px rgba(247, 37, 133, 0.15);
+        padding: 20px 25px;
+        margin: 15px 0 30px 0;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
         animation: slideDown 0.8s ease-out;
         position: relative;
         overflow: hidden;
     }
-    .ai-panel::before {
-        content: '';
-        position: absolute;
-        top: -50%; left: -50%;
-        width: 200%; height: 200%;
-        background: radial-gradient(circle, rgba(247, 37, 133, 0.05) 0%, transparent 60%);
-        animation: pulse 4s infinite linear;
+    .ai-panel::after {
+        content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+        animation: glassShine 6s infinite;
     }
+    @keyframes glassShine { 0% { left: -100%; } 20% { left: 200%; } 100% { left: 200%; } }
+    
     .ai-title {
-        color: #f72585;
-        font-size: 18px;
-        font-weight: 900;
-        margin-bottom: 15px;
-        letter-spacing: 1px;
-        text-transform: uppercase;
-        display: flex;
-        align-items: center;
-        gap: 10px;
+        color: #f72585; font-size: 18px; font-weight: 900; margin-bottom: 15px;
+        letter-spacing: 1px; text-transform: uppercase; display: flex; align-items: center; gap: 10px;
     }
     .ai-bullet {
-        color: #e0e6ed;
-        font-size: 14px;
-        margin-bottom: 10px;
-        line-height: 1.5;
-        display: flex;
-        align-items: flex-start;
-        gap: 10px;
+        color: #ccd6f6; font-size: 14.5px; margin-bottom: 12px; line-height: 1.6;
+        display: flex; align-items: flex-start; gap: 10px;
     }
-    .ai-icon { font-size: 16px; }
 
-    /* Other Dashboard Elements */
-    .metric-card {
-        background: linear-gradient(145deg, #1c2541, #131b2e);
-        padding: 22px;
-        border-radius: 14px;
-        border: 1px solid #48cae4;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
-        margin-bottom: 15px;
-        color: white;
-        animation: fadeUp 1s ease-out both;
-    }
-    .metric-title {
-        font-size: 15px;
-        color: #90e0ef;
-        font-weight: 800;
-        text-transform: uppercase;
-        border-bottom: 2px solid rgba(72, 202, 228, 0.3);
-        padding-bottom: 6px;
-        margin-bottom: 10px;
-    }
+    /* 8. Modern Tables */
     .custom-table-container {
-        overflow-x: auto;
-        max-height: 450px;
-        border: 1px solid #48cae4;
+        overflow-x: auto; max-height: 480px;
+        border: 1px solid rgba(72, 202, 228, 0.2);
         border-radius: 12px;
-        background-color: #1c2541;
-        box-shadow: 0 8px 20px rgba(0,0,0,0.4);
-        margin-bottom: 15px;
-        animation: fadeUp 1.2s ease-out both;
+        background-color: rgba(10, 25, 47, 0.7);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        margin-bottom: 20px;
+        animation: fadeUp 1s ease-out both;
+        backdrop-filter: blur(5px);
     }
-    .custom-table { width: 100%; border-collapse: collapse; color: #ffffff; font-size: 13px; white-space: nowrap; }
-    .custom-table th { background: linear-gradient(90deg, #0b132b, #1c2541); color: #48cae4; padding: 12px 15px; text-align: left; position: sticky; top: 0; font-weight: 800; z-index: 1; border-bottom: 3px solid #48cae4;}
-    .custom-table td { padding: 10px 15px; border-bottom: 1px solid #2b3a55; color: #e0e6ed; }
-    .custom-table tr:hover td { background-color: #2b3a55; color: #90e0ef; }
+    .custom-table { width: 100%; border-collapse: collapse; font-size: 13.5px; white-space: nowrap; }
+    .custom-table th { 
+        background: rgba(17, 34, 64, 0.95); color: #48cae4; 
+        padding: 14px 16px; text-align: left; position: sticky; top: 0; 
+        font-weight: 800; z-index: 1; border-bottom: 2px solid #f72585;
+    }
+    .custom-table td { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); color: #8892b0; transition: all 0.2s ease;}
+    .custom-table tr:hover td { background-color: rgba(72, 202, 228, 0.08); color: #64ffda; transform: scale(1.002); }
     
     @keyframes slideDown { 0% { transform: translateY(-20px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
     @keyframes fadeUp { 0% { transform: translateY(20px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
-    @keyframes pulse { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 """, unsafe_allow_html=True)
 
-# ================= CONSTANTS =================
+# ================= CONSTANTS & DIRECTORIES =================
 ONTIME = 'On-Time Trip Closed'
 DELAY = 'Delay Trip Closed'
 EXCEL_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -135,7 +146,7 @@ CALLOUT_PATH = os.path.join(DATA_DIR, "callout.pkl")
 MIS_PATH = os.path.join(DATA_DIR, "mis.pkl")
 
 
-# ================= HELPERS =================
+# ================= DATA HELPERS =================
 def is_blank(v):
     if v is None: return True
     try:
@@ -176,7 +187,7 @@ def render_html_table(df_to_show, max_rows=2000):
     clean_df = df_to_show.fillna("").astype(str)
     note = ""
     if len(clean_df) > max_rows:
-        note = f'<div style="color:#ffb703; font-size:12px; margin-bottom:6px;">Showing first {max_rows} rows. Full data available in Excel download.</div>'
+        note = f'<div style="color:#f72585; font-size:12px; margin-bottom:6px; font-weight:600;">⚡ Showing first {max_rows} rows for performance. Download Excel for full data.</div>'
         clean_df = clean_df.head(max_rows)
     headers = "".join([f"<th>{html_lib.escape(str(col))}</th>" for col in clean_df.columns])
     rows_html = []
@@ -218,13 +229,13 @@ def render_ai_executive_summary(df, late_col, client_col):
         delayed_routes = delayed_vehicles[from_col].astype(str) + " ➔ " + delayed_vehicles[dest_col].astype(str)
         top_route = delayed_routes.value_counts().index[0] if not delayed_routes.empty else "Unknown"
         top_route_count = delayed_routes.value_counts().iloc[0] if not delayed_routes.empty else 0
-        insights.append(f"<div class='ai-bullet'><span class='ai-icon'>🛣️</span> <b>Route Bottleneck:</b> The route <b>{top_route}</b> has the highest number of issues with {top_route_count} delayed vehicles.</div>")
+        insights.append(f"<div class='ai-bullet'><span class='ai-icon'>🛣️</span> <b>Route Bottleneck:</b> The route <b style='color:#64ffda;'>{top_route}</b> has the highest number of issues with {top_route_count} delayed vehicles.</div>")
 
     # Insight 3: Client Impact
     if client_col and delay_count > 0:
         top_client = delayed_vehicles[client_col].value_counts().index[0] if not delayed_vehicles[client_col].empty else "Unknown"
         top_client_count = delayed_vehicles[client_col].value_counts().iloc[0] if not delayed_vehicles[client_col].empty else 0
-        insights.append(f"<div class='ai-bullet'><span class='ai-icon'>🏢</span> <b>Client Impact:</b> <b>{top_client}</b> is the most affected client in this filter, experiencing {top_client_count} delays.</div>")
+        insights.append(f"<div class='ai-bullet'><span class='ai-icon'>🏢</span> <b>Client Impact:</b> <b style='color:#64ffda;'>{top_client}</b> is the most affected client in this filter, experiencing {top_client_count} delays.</div>")
 
     html_insights = "".join(insights)
     
@@ -285,7 +296,7 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
         selected_client_report, selected_delay_hours, selected_remarks_filter = "ALL", "ALL", "ALL"
         selected_month, selected_date, delay_filter, selected_weeks = "ALL", "ALL", "ALL Reported Vehicles", []
     else:
-        st.markdown("### 🔍 Live Data Filters")
+        st.markdown("<h3 style='color:#48cae4; font-size:18px;'>🔍 Live Data Filters</h3>", unsafe_allow_html=True)
         f_col1, f_col2, f_col3, f_col4, f_col5, f_col6, f_col7 = st.columns(7)
         with f_col1: selected_date = st.selectbox("📅 Date:", date_options, index=0, key=f"d_{unique_key}")
         with f_col2: selected_month = st.selectbox("🗓️ Month:", month_options, index=0, key=f"m_{unique_key}")
@@ -299,7 +310,7 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
         available_weeks = [w for w in strict_week_options if w in reported_df['_Rel_Week'].unique()]
         selected_weeks = []
         if available_weeks:
-            st.markdown("<div style='font-size: 13px; color: #90e0ef; margin-bottom: 5px;'>Filter by Week:</div>", unsafe_allow_html=True)
+            st.markdown("<div style='font-size: 13px; color: #8892b0; margin-bottom: 5px; margin-top:10px;'>Filter by Week:</div>", unsafe_allow_html=True)
             chk_cols = st.columns(len(strict_week_options))
             for i, wk in enumerate(strict_week_options):
                 with chk_cols[i]:
@@ -386,7 +397,7 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
     if staff_filter: return
 
     # ================= VEHICLE-WISE PERFORMANCE SECTION =================
-    st.markdown("<br>## 🚛 Vehicle-wise Trip Closed Performance", unsafe_allow_html=True)
+    st.markdown("<br><h3 style='color:#48cae4; font-size:22px; margin-bottom:15px;'>🚛 Vehicle-wise Trip Closed Performance</h3>", unsafe_allow_html=True)
 
     lorry_col = next((c for c in reported_df.columns if c.lower().strip() in ['lorry no.', 'lorry no', 'vehicle no', 'vehicle', 'truck']), None)
     if not lorry_col: lorry_col = next((c for c in reported_df.columns if any(k in c.lower() for k in ['lorry', 'vehicle', 'truck'])) , None)
@@ -469,16 +480,16 @@ def process_uploaded_files(uploaded_files):
 
 # ================= MAIN APP =================
 def main():
-    # 🌟 NEW PREMIUM ANIMATED HEADING 🌟
+    # 🌟 ULTRA PREMIUM ANIMATED HEADING 🌟
     st.markdown("<h1 class='premium-title'>🚀 Sales Manager Live Monitoring Dashboard</h1>", unsafe_allow_html=True)
 
     if 'stored_mis_df' not in st.session_state: st.session_state.stored_mis_df = pd.read_pickle(MIS_PATH) if os.path.exists(MIS_PATH) else pd.DataFrame()
     if 'stored_callout_df' not in st.session_state: st.session_state.stored_callout_df = pd.read_pickle(CALLOUT_PATH) if os.path.exists(CALLOUT_PATH) else pd.DataFrame()
 
-    st.sidebar.header("📁 Data Management")
+    st.sidebar.markdown("<h2 style='color:#64ffda; font-size:18px;'>📁 Data Management</h2>", unsafe_allow_html=True)
     uploaded_files = st.sidebar.file_uploader("Upload MIS/Callout (Excel/CSV)", type=["xlsx", "csv"], accept_multiple_files=True)
 
-    if uploaded_files and st.sidebar.button("💾 Process & Save", type="primary"):
+    if uploaded_files and st.sidebar.button("💾 Process & Save Data", type="primary"):
         c_df, m_df = process_uploaded_files(uploaded_files)
         st.session_state.stored_callout_df = c_df
         st.session_state.stored_mis_df = m_df
@@ -487,7 +498,7 @@ def main():
         st.sidebar.success("Saved successfully!")
         st.rerun()
 
-    if st.sidebar.button("🗑️ Clear Data"):
+    if st.sidebar.button("🗑️ Clear Dashboard Data"):
         st.session_state.stored_callout_df = pd.DataFrame()
         st.session_state.stored_mis_df = pd.DataFrame()
         if os.path.exists(CALLOUT_PATH): os.remove(CALLOUT_PATH)
@@ -495,15 +506,15 @@ def main():
         st.rerun()
 
     st.sidebar.markdown("---")
-    st.sidebar.header("📊 Dashboard Navigation")
+    st.sidebar.markdown("<h2 style='color:#64ffda; font-size:18px;'>📊 Application Views</h2>", unsafe_allow_html=True)
     
-    app_mode = st.sidebar.selectbox("Choose View", ["Main MIS Dashboard", "Callout Summary", "Staff Login Portal"])
+    app_mode = st.sidebar.selectbox("Navigate To:", ["Main MIS Dashboard", "Callout Summary", "Staff Login Portal"])
 
     callout_df = st.session_state.stored_callout_df
     mis_df = st.session_state.stored_mis_df
 
     if mis_df.empty and callout_df.empty:
-        st.info("Kripya sidebar mein files upload karke 'Process & Save' karein.")
+        st.info("👋 Welcome! Please upload your MIS or Callout files in the sidebar and click 'Process & Save Data' to start.")
         return
 
     if app_mode == "Main MIS Dashboard":
@@ -513,7 +524,7 @@ def main():
             st.warning("Koi MIS data available nahi hai.")
 
     elif app_mode == "Callout Summary":
-        st.header("⚠️ Callout / Breakdown Summary")
+        st.markdown("<h2 style='color:#f72585;'>⚠️ Callout / Breakdown Summary</h2>", unsafe_allow_html=True)
         if not callout_df.empty:
             st.metric("TOTAL CALLOUT COUNT", len(callout_df))
             st.markdown(render_html_table(callout_df), unsafe_allow_html=True)
@@ -521,7 +532,7 @@ def main():
             st.info("Koi Callout data available nahi hai.")
 
     elif app_mode == "Staff Login Portal":
-        st.header("🔒 Staff Login Portal")
+        st.markdown("<h2 style='color:#48cae4;'>🔒 Staff Login Portal</h2>", unsafe_allow_html=True)
         staff_col = next((c for c in mis_df.columns if 'controlling' in c.lower() or 'staff' in c.lower()), None)
         if staff_col and not mis_df.empty:
             staff_names = sorted([str(x).strip() for x in mis_df[staff_col].dropna().unique() if str(x).strip() != ""])
