@@ -9,12 +9,37 @@ import html as html_lib
 # 1. Page Configuration
 st.set_page_config(page_title="Sales Manager Live Monitoring Dashboard", layout="wide", initial_sidebar_state="expanded")
 
-# Custom CSS for Dynamic & Attractive Modern Dark Theme Styling
+# Custom CSS for Dynamic & Attractive Modern Dark Theme Styling (Now with Animations)
 st.markdown("""
     <style>
+    /* Animated Background Gradient */
     .main, [data-testid="stAppViewContainer"] {
-        background: linear-gradient(135deg, #0b132b 0%, #1c2541 100%);
+        background: linear-gradient(135deg, #0b132b, #1c2541, #0b132b);
+        background-size: 200% 200%;
+        animation: gradientBG 15s ease infinite;
     }
+
+    @keyframes gradientBG {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+
+    /* Entrance Animations for Headers */
+    @keyframes slideDown {
+        0% { transform: translateY(-30px); opacity: 0; }
+        100% { transform: translateY(0); opacity: 1; }
+    }
+    h1 { animation: slideDown 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
+    h2 { animation: slideDown 1s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
+    h3 { animation: slideDown 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
+
+    /* Entrance Animations for Cards and Tables */
+    @keyframes fadeUp {
+        0% { transform: translateY(30px); opacity: 0; }
+        100% { transform: translateY(0); opacity: 1; }
+    }
+
     .metric-card {
         background: linear-gradient(145deg, #1c2541, #131b2e);
         padding: 22px;
@@ -24,12 +49,22 @@ st.markdown("""
         margin-bottom: 15px;
         color: white;
         transition: transform 0.3s ease, box-shadow 0.3s ease;
+        animation: fadeUp 1s ease-out both;
     }
+    
     .metric-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 12px 25px rgba(72, 202, 228, 0.25);
+        transform: translateY(-8px) scale(1.02);
+        box-shadow: 0 15px 30px rgba(72, 202, 228, 0.3);
         border-color: #90e0ef;
     }
+
+    /* Glowing Text Animation */
+    @keyframes textGlow {
+        0% { text-shadow: 0 0 5px rgba(144, 224, 239, 0.2); }
+        50% { text-shadow: 0 0 15px rgba(144, 224, 239, 0.8); }
+        100% { text-shadow: 0 0 5px rgba(144, 224, 239, 0.2); }
+    }
+    
     .metric-title {
         font-size: 15px;
         color: #90e0ef;
@@ -39,7 +74,9 @@ st.markdown("""
         border-bottom: 2px solid rgba(72, 202, 228, 0.3);
         padding-bottom: 6px;
         margin-bottom: 10px;
+        animation: textGlow 3s infinite;
     }
+
     .custom-table-container {
         overflow-x: auto;
         max-height: 450px;
@@ -49,7 +86,10 @@ st.markdown("""
         background-color: #1c2541;
         box-shadow: 0 8px 20px rgba(0,0,0,0.4);
         margin-bottom: 15px;
+        animation: fadeUp 1.2s ease-out both;
     }
+    
+    /* Table Row Hover Animation */
     .custom-table {
         width: 100%;
         border-collapse: collapse;
@@ -73,11 +113,18 @@ st.markdown("""
         padding: 10px 15px;
         border-bottom: 1px solid #2b3a55;
         color: #e0e6ed;
+        transition: background-color 0.2s ease, padding-left 0.2s ease;
     }
     .custom-table tr:hover td {
         background-color: #2b3a55;
         color: #90e0ef;
     }
+
+    /* Sidebar Content Fade-in */
+    [data-testid="stSidebar"] > div:first-child {
+        animation: fadeUp 0.8s ease-out;
+    }
+
     h1, h2, h3 {
         color: #ffffff;
         font-weight: 900 !important;
@@ -703,7 +750,6 @@ def main():
     st.sidebar.markdown("---")
     st.sidebar.header("📊 Dashboard Navigation")
     
-    # --- AI MENU ADDED HERE ---
     app_mode = st.sidebar.selectbox("Choose View", [
         "Main MIS Dashboard", 
         "Callout Summary", 
@@ -745,14 +791,10 @@ def main():
         else:
             st.warning("Controlling Staff column nahi mila ya MIS data khali hai.")
 
-    # =========================================================
-    # NEW OPTION 1: 🤖 AI Chat with Data (AI Data Analyst)
-    # =========================================================
     elif app_mode == "🤖 AI Chat with Data":
         st.header("🤖 Chat with Your Data (AI Data Analyst)")
         st.markdown("Apne data se natural language mein sawal pochein (e.g., 'Kaunsa route sabse zyada delay hai?', 'Total callouts kitne hain?')")
 
-        # API Key input in sidebar
         api_key = st.sidebar.text_input("Enter Gemini API Key", type="password")
 
         if mis_df.empty and callout_df.empty:
@@ -788,9 +830,6 @@ def main():
                     except Exception as e:
                         st.error(f"Error processing AI query (Ensure you pip installed required packages): {e}")
 
-    # =========================================================
-    # NEW OPTION 2: 🧠 Smart Remarks Analyzer (NLP Categorization)
-    # =========================================================
     elif app_mode == "🧠 Smart Remarks Analyzer":
         st.header("🧠 AI Smart Remarks Categorization")
         st.markdown("Raw tracking remarks ko AI ki madad se automatically categories (e.g., Traffic, Breakdown, Driver Issue) mein badlein.")
