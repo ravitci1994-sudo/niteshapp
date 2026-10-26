@@ -188,7 +188,7 @@ def render_news_ticker(df):
     st.markdown(f"""<div class="news-ticker-container"><div class="ticker-label">BREAKING 🔴</div><div class="ticker-text-wrapper">{full_text}</div></div>""", unsafe_allow_html=True)
 
 
-# ================= IN-TRANSIT TABLE =================
+# ================= IN-TRANSIT TABLE WITH CLIENT FILTER =================
 def show_in_transit_table(df, unique_key="", locked_staff=None):
     st.markdown("<br><h2 style='color:#f72585;'>🚚 In-Transit Vehicles (Live Tracking)</h2>", unsafe_allow_html=True)
     final_rep_col = next((c for c in ['Final Touching Reporting Date & Time', 'Reporting Date & Time', 'Reporting Date', 'Desp. Date & Time'] if c in df.columns), None)
@@ -199,6 +199,7 @@ def show_in_transit_table(df, unique_key="", locked_staff=None):
         
     in_transit_df = df[df[final_rep_col].apply(is_blank)].copy()
     staff_col = next((c for c in in_transit_df.columns if 'controlling' in c.lower() or 'staff' in c.lower()), None)
+    client_col_name = vendor_column(in_transit_df) or 'VendorName'
     
     if locked_staff and staff_col:
         in_transit_df = in_transit_df[in_transit_df[staff_col].astype(str).str.strip().str.upper() == locked_staff.upper()]
@@ -206,6 +207,15 @@ def show_in_transit_table(df, unique_key="", locked_staff=None):
     if in_transit_df.empty:
         st.success("🎉 Koi In-Transit vehicle nahi bacha.")
         return
+
+    # 🔥 FILTER BY CLIENT DROPDOWN ADDED HERE 🔥
+    f_col1, f_col2 = st.columns(2)
+    with f_col1:
+        client_list = ["ALL"] + sorted([str(x).strip() for x in in_transit_df[client_col_name].dropna().unique() if str(x).strip() != ""]) if client_col_name in in_transit_df.columns else ["ALL"]
+        selected_client = st.selectbox("🏢 Filter by Client:", client_list, key=f"it_client_{unique_key}")
+        
+    if selected_client != "ALL" and client_col_name in in_transit_df.columns:
+        in_transit_df = in_transit_df[in_transit_df[client_col_name].astype(str).str.strip() == selected_client]
 
     st.metric("Total In-Transit Vehicles", len(in_transit_df))
     final_it_df = in_transit_df.copy()
@@ -492,7 +502,6 @@ def main():
     st.sidebar.markdown("---")
     st.sidebar.markdown("<h2 style='color:#64ffda; font-size:18px;'>📊 Application Views</h2>", unsafe_allow_html=True)
     
-    # 🔥 YAHAN "Client Summary" ADD KAR DIYA GAYA HAI 🔥
     app_mode = st.sidebar.selectbox("Navigate To:", [
         "Main MIS Dashboard", 
         "In-Transit Vehicles", 
