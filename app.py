@@ -372,7 +372,7 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
         if staff_col: filtered_report_df = filtered_report_df[filtered_report_df[staff_col].astype(str).str.strip() == staff_filter]
 
     if filtered_report_df.empty:
-        st.info("No data found for the selected filters.")
+        st.warning("No data found for the selected filters.")
         return
 
     # EXACT USER SPECIFIED COLUMNS FILTERING
@@ -408,14 +408,16 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
     excel_bytes_reported = to_excel_bytes({'Reported_Vehicles': final_report_df})
     st.download_button(label=f"📥 Download Filtered Excel", data=excel_bytes_reported, file_name="Reported_Vehicles.xlsx", mime=EXCEL_MIME, type="primary", key=f"dl_{unique_key}")
 
-    # ================= 🔥 CLIENT-WISE PERFORMANCE SECTION 🔥 =================
+    # ================= 🔥 CLIENT-WISE PERFORMANCE SECTION (BASE INDEPENDENT OF FILTERS) 🔥 =================
     st.markdown("<br><h3 style='color:#f72585; font-size:22px; margin-bottom:15px;'>🏢 Client-wise Performance Summary</h3>", unsafe_allow_html=True)
-    if client_col_name and client_col_name in filtered_report_df.columns and late_col:
-        client_df = filtered_report_df.copy()
-        client_df['Is_OnTime'] = client_df[late_col].apply(is_zero_late)
-        client_df['Is_Delay'] = ~client_df[late_col].apply(is_zero_late)
+    
+    # NOTE: Yeh base dataframe (`reported_df`) par calculate ho raha hai, isliye upar ke live filters change karne par yeh change nahi hoga.
+    if client_col_name and client_col_name in reported_df.columns and late_col:
+        client_base_df = reported_df.copy()
+        client_base_df['Is_OnTime'] = client_base_df[late_col].apply(is_zero_late)
+        client_base_df['Is_Delay'] = ~client_base_df[late_col].apply(is_zero_late)
         
-        client_summary = client_df.groupby(client_col_name).agg(
+        client_summary = client_base_df.groupby(client_col_name).agg(
             Total=('Is_OnTime', 'count'),
             OnTime=('Is_OnTime', 'sum'),
             Delay=('Is_Delay', 'sum')
@@ -459,7 +461,6 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
         veh_staff_list = ["ALL"] + sorted([str(x).strip() for x in temp_veh_df[staff_col].dropna().unique() if str(x).strip() != ""]) if staff_col else ["ALL"]
         veh_client_list = ["ALL"] + sorted([str(x).strip() for x in temp_veh_df[client_col_name].dropna().unique() if str(x).strip() != ""]) if client_col_name in temp_veh_df.columns else ["ALL"]
         
-        # 🔥 NEW: FREQUENCY FILTER OPTIONS
         freq_options = ["ALL", "> 1 Delay", "> 2 Delays", "> 3 Delays", "> 4 Delays", "> 5 Delays"]
         
         with v_f1: sel_veh_staff = st.selectbox("👨‍💼 Controlling Staff:", veh_staff_list, key=f"vs_{unique_key}")
@@ -479,7 +480,6 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
 
         veh_groups = veh_df.groupby([lorry_col, 'Route']).agg(Total=('Is_OnTime', 'count'), OnTime=('Is_OnTime', 'sum'), Delay=('Is_Delay', 'sum')).reset_index()
         
-        # 🔥 APPLYING THE DELAY FREQUENCY FILTER HERE
         if sel_veh_freq != "ALL":
             if sel_veh_freq == "> 1 Delay": veh_groups = veh_groups[veh_groups['Delay'] > 1]
             elif sel_veh_freq == "> 2 Delays": veh_groups = veh_groups[veh_groups['Delay'] > 2]
