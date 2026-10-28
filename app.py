@@ -9,70 +9,56 @@ import html as html_lib
 # 1. Page Configuration
 st.set_page_config(page_title="Sales Manager Live Monitoring Dashboard", layout="wide", initial_sidebar_state="expanded")
 
-# ================= CUSTOM CSS FOR ULTRA-PREMIUM LOOK =================
+# ================= CUSTOM CSS FOR CLEAN LIGHT THEME (EXACT MATCH) =================
 st.markdown("""
     <style>
-    /* Global Animated Background */
+    /* Global Light Theme Background */
     .main, [data-testid="stAppViewContainer"] {
-        background: linear-gradient(135deg, #050b14 0%, #0a192f 50%, #050b14 100%);
-        background-size: 200% 200%;
-        animation: gradientBG 15s ease infinite;
-        color: #e6f1ff;
+        background-color: #f8fafc !important;
+        color: #1e293b !important;
     }
-    @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
 
     /* Custom Sleek Scrollbar */
     ::-webkit-scrollbar { width: 8px; height: 8px; }
-    ::-webkit-scrollbar-track { background: #050b14; }
-    ::-webkit-scrollbar-thumb { background: rgba(72, 202, 228, 0.5); border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: #f72585; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-    /* Glassmorphism Sidebar */
+    /* Glassmorphism Sidebar (Light) */
     [data-testid="stSidebar"] {
-        background: rgba(10, 25, 47, 0.85) !important;
-        backdrop-filter: blur(12px) !important;
-        -webkit-backdrop-filter: blur(12px) !important;
-        border-right: 1px solid rgba(72, 202, 228, 0.15);
+        background: #ffffff !important;
+        border-right: 1px solid #e2e8f0;
     }
 
-    /* Premium Animated Title */
+    /* Clean Title */
     .premium-title {
-        font-size: 2.3rem;
-        font-weight: 900;
-        text-align: left;
-        background: linear-gradient(to right, #ffffff 0%, #48cae4 20%, #f72585 50%, #48cae4 80%, #ffffff 100%);
-        background-size: 200% auto;
-        color: #fff;
-        background-clip: text;
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        animation: textShine 4s linear infinite;
+        font-size: 2.2rem;
+        font-weight: 800;
+        color: #0f172a;
         margin-bottom: 0px;
         margin-top: 0px;
-        padding-bottom: 0px;
     }
-    @keyframes textShine { to { background-position: 200% center; } }
     
-    /* 🔥 NEWS TICKER ANIMATION CSS (SLOW & READABLE) 🔥 */
+    /* 🔥 NEWS TICKER ANIMATION CSS (LIGHT THEME) 🔥 */
     .news-ticker-container {
         width: 100%;
-        background: linear-gradient(90deg, #f72585, #7209b7);
+        background: linear-gradient(90deg, #3b82f6, #1d4ed8);
         color: white;
         overflow: hidden;
         white-space: nowrap;
         box-sizing: border-box;
         border-radius: 8px;
         margin-bottom: 25px;
-        box-shadow: 0 4px 15px rgba(247, 37, 133, 0.4);
+        box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
         position: relative;
         display: flex;
         align-items: center;
-        height: 45px;
+        height: 40px;
     }
     .ticker-label {
-        background: #050b14;
-        color: #64ffda;
-        font-weight: 900;
+        background: #1e293b;
+        color: #38bdf8;
+        font-weight: 800;
         padding: 0 15px;
         height: 100%;
         display: flex;
@@ -81,13 +67,11 @@ st.markdown("""
         left: 0;
         z-index: 10;
         border-radius: 8px 0 0 8px;
-        border-right: 2px solid #64ffda;
         text-transform: uppercase;
         letter-spacing: 1px;
-        box-shadow: 5px 0 15px rgba(0,0,0,0.5);
     }
     .ticker-text-wrapper {
-        padding-left: 160px; 
+        padding-left: 140px; 
         display: inline-block;
         white-space: nowrap;
         animation: marquee 45s linear infinite; 
@@ -95,65 +79,52 @@ st.markdown("""
     .ticker-item {
         display: inline-block;
         padding: 0 40px;
-        font-size: 15.5px;
+        font-size: 14.5px;
         font-weight: 600;
-        letter-spacing: 0.5px;
     }
     @keyframes marquee {
         0% { transform: translateX(100vw); }
         100% { transform: translateX(-100%); }
     }
 
-    /* Streamlit Widget Enhancements */
+    /* Streamlit Widget Enhancements (Light) */
     .stSelectbox div[data-baseweb="select"] > div {
-        background-color: rgba(28, 37, 65, 0.6) !important;
-        border: 1px solid rgba(72, 202, 228, 0.3) !important;
-        border-radius: 8px !important;
-        color: white !important;
-        transition: all 0.3s ease;
-    }
-    .stSelectbox div[data-baseweb="select"] > div:hover {
-        border: 1px solid #f72585 !important;
-        box-shadow: 0 0 10px rgba(247, 37, 133, 0.2);
+        background-color: #ffffff !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 6px !important;
+        color: #1e293b !important;
     }
     
-    /* Glowing Buttons */
+    /* Buttons */
     .stButton > button {
-        background: linear-gradient(90deg, #f72585, #7209b7) !important;
+        background: #2563eb !important;
         border: none !important;
         color: white !important;
-        border-radius: 8px !important;
+        border-radius: 6px !important;
         font-weight: 700 !important;
-        transition: all 0.3s ease !important;
-        box-shadow: 0 4px 15px rgba(247, 37, 133, 0.3) !important;
+        box-shadow: 0 2px 5px rgba(37, 99, 235, 0.3) !important;
     }
     .stButton > button:hover {
-        transform: translateY(-2px) !important;
-        box-shadow: 0 6px 25px rgba(247, 37, 133, 0.6) !important;
+        background: #1d4ed8 !important;
     }
 
-    /* Modern Tables */
+    /* Clean Light Modern Tables */
     .custom-table-container {
         overflow-x: auto; max-height: 480px;
-        border: 1px solid rgba(72, 202, 228, 0.2);
-        border-radius: 12px;
-        background-color: rgba(10, 25, 47, 0.7);
-        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        background-color: #ffffff;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
         margin-bottom: 20px;
-        animation: fadeUp 1s ease-out both;
-        backdrop-filter: blur(5px);
     }
     .custom-table { width: 100%; border-collapse: collapse; font-size: 13.5px; white-space: nowrap; }
     .custom-table th { 
-        background: rgba(17, 34, 64, 0.95); color: #48cae4; 
-        padding: 14px 16px; text-align: left; position: sticky; top: 0; 
-        font-weight: 800; z-index: 1; border-bottom: 2px solid #f72585;
+        background: #f1f5f9; color: #334155; 
+        padding: 12px 16px; text-align: left; position: sticky; top: 0; 
+        font-weight: 700; z-index: 1; border-bottom: 2px solid #cbd5e1;
     }
-    .custom-table td { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); color: #8892b0; transition: all 0.2s ease;}
-    .custom-table tr:hover td { background-color: rgba(72, 202, 228, 0.08); color: #48cae4; transform: scale(1.002); }
-    
-    @keyframes slideDown { 0% { transform: translateY(-20px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
-    @keyframes fadeUp { 0% { transform: translateY(20px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+    .custom-table td { padding: 11px 16px; border-bottom: 1px solid #f1f5f9; color: #475569; }
+    .custom-table tr:hover td { background-color: #f8fafc; color: #0f172a; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -208,7 +179,7 @@ def render_html_table(df_to_show, max_rows=2000):
     clean_df = df_to_show.fillna("").astype(str)
     note = ""
     if len(clean_df) > max_rows:
-        note = f'<div style="color:#f72585; font-size:12px; margin-bottom:6px; font-weight:600;">⚡ Showing first {max_rows} rows for performance. Download Excel for full data.</div>'
+        note = f'<div style="color:#e11d48; font-size:12px; margin-bottom:6px; font-weight:600;">⚡ Showing first {max_rows} rows for performance. Download Excel for full data.</div>'
         clean_df = clean_df.head(max_rows)
     headers = "".join([f"<th>{html_lib.escape(str(col))}</th>" for col in clean_df.columns])
     rows_html = []
@@ -257,7 +228,7 @@ def render_news_ticker(df):
     full_text = f"<span class='ticker-item'>{ticker_text}</span>" * 4
     
     html_out = f"""<div class="news-ticker-container">
-<div class="ticker-label">BREAKING 🔴</div>
+<div class="ticker-label">INFO 🔴</div>
 <div class="ticker-text-wrapper">{full_text}</div>
 </div>"""
     st.markdown(html_out, unsafe_allow_html=True)
@@ -313,7 +284,7 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
         selected_client_report, selected_delay_hours, selected_remarks_filter = "ALL", "ALL", "ALL"
         selected_month, selected_date, delay_filter, selected_weeks = "ALL", "ALL", "ALL Reported Vehicles", []
     else:
-        st.markdown("<h3 style='color:#48cae4; font-size:18px;'>🔍 Live Data Filters</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='color:#0f172a; font-size:16px;'>🔍 Live Data Filters</h3>", unsafe_allow_html=True)
         f_col1, f_col2, f_col3, f_col4, f_col5, f_col6, f_col7 = st.columns(7)
         with f_col1: selected_date = st.selectbox("📅 Date:", date_options, index=0, key=f"d_{unique_key}")
         with f_col2: selected_month = st.selectbox("🗓️ Month:", month_options, index=0, key=f"m_{unique_key}")
@@ -327,7 +298,7 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
         available_weeks = [w for w in strict_week_options if w in reported_df['_Rel_Week'].unique()]
         selected_weeks = []
         if available_weeks:
-            st.markdown("<div style='font-size: 13px; color: #8892b0; margin-bottom: 5px; margin-top:10px;'>Filter by Week:</div>", unsafe_allow_html=True)
+            st.markdown("<div style='font-size: 13px; color: #64748b; margin-bottom: 5px; margin-top:10px;'>Filter by Week:</div>", unsafe_allow_html=True)
             chk_cols = st.columns(len(strict_week_options))
             for i, wk in enumerate(strict_week_options):
                 with chk_cols[i]:
@@ -409,7 +380,7 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
     st.download_button(label=f"📥 Download Filtered Excel", data=excel_bytes_reported, file_name="Reported_Vehicles.xlsx", mime=EXCEL_MIME, type="primary", key=f"dl_{unique_key}")
 
     # ================= 🔥 CLIENT-WISE PERFORMANCE SECTION (BASE INDEPENDENT OF FILTERS) 🔥 =================
-    st.markdown("<br><h3 style='color:#f72585; font-size:22px; margin-bottom:15px;'>🏢 Client-wise Performance Summary</h3>", unsafe_allow_html=True)
+    st.markdown("<br><h3 style='color:#0f172a; font-size:18px; margin-bottom:15px;'>🏢 Client-wise Performance Summary</h3>", unsafe_allow_html=True)
     
     if client_col_name and client_col_name in reported_df.columns and late_col:
         client_base_df = reported_df.copy()
@@ -444,7 +415,7 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
     if staff_filter: return
 
     # ================= VEHICLE-WISE PERFORMANCE SECTION =================
-    st.markdown("<br><h3 style='color:#48cae4; font-size:22px; margin-bottom:15px;'>🚛 Vehicle-wise Trip Closed Performance</h3>", unsafe_allow_html=True)
+    st.markdown("<br><h3 style='color:#0f172a; font-size:18px; margin-bottom:15px;'>🚛 Vehicle-wise Trip Closed Performance</h3>", unsafe_allow_html=True)
 
     lorry_col = next((c for c in reported_df.columns if c.lower().strip() in ['lorry no.', 'lorry no', 'vehicle no', 'vehicle', 'truck']), None)
     if not lorry_col: lorry_col = next((c for c in reported_df.columns if any(k in c.lower() for k in ['lorry', 'vehicle', 'truck'])) , None)
@@ -504,7 +475,7 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
 
 # ================= IN-TRANSIT VEHICLE VIEW =================
 def show_in_transit_view(mis_df):
-    st.markdown("<h2 style='color:#48cae4;'>🚚 In-Transit Vehicles (Active Trips)</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='color:#0f172a;'>🚚 In-Transit Vehicles (Active Trips)</h2>", unsafe_allow_html=True)
     
     final_rep_col = next((c for c in ['Final Touching Reporting Date & Time', 'Reporting Date & Time', 'Reporting Date'] if c in mis_df.columns), None)
     if not final_rep_col:
@@ -514,7 +485,6 @@ def show_in_transit_view(mis_df):
         st.warning("MIS data mein reporting date column nahi mila.")
         return
 
-    # Filter: Jinka Final Touching Reporting Date & Time BLANK hai (In-Transit)
     in_transit_df = mis_df[mis_df[final_rep_col].apply(is_blank)].copy()
 
     if in_transit_df.empty:
@@ -523,7 +493,6 @@ def show_in_transit_view(mis_df):
 
     st.metric("TOTAL IN-TRANSIT VEHICLES", len(in_transit_df))
 
-    # Client-wise aur Staff-wise dropdown filters
     staff_col = next((c for c in in_transit_df.columns if 'controlling' in c.lower() or 'staff' in c.lower()), None)
     client_col_name = vendor_column(in_transit_df) or 'VendorName'
 
@@ -539,7 +508,6 @@ def show_in_transit_view(mis_df):
     if selected_client_it != "ALL" and client_col_name in filtered_it_df.columns:
         filtered_it_df = filtered_it_df[filtered_it_df[client_col_name].astype(str).str.strip() == selected_client_it]
 
-    # Desired Columns Selection
     desired_cols = [
         'Lorry No.', 'Veh.Type', 'From', 'Destination', 'Party', 'Desp. Date & Time',
         'Hrs. Given', '1st Touching', '1st Touching Reporting Date & Time', 
@@ -597,28 +565,24 @@ def process_uploaded_files(uploaded_files):
 
 # ================= MAIN APP =================
 def main():
-    # Top header with Title on left and Tejas Cargo Branding Badge & Icons on right corner
-    header_col1, header_col2 = st.columns([3.2, 1.8])
+    # Top header with Title on left and Tejas Cargo Logo & Truck Brand badge on right corner
+    header_col1, header_col2 = st.columns([3, 2])
     with header_col1:
-        st.markdown("<h1 class='premium-title' style='padding-top: 5px;'>🚀 Sales Manager Live Monitoring Dashboard</h1>", unsafe_allow_html=True)
+        st.markdown("<h1 class='premium-title' style='padding-top: 5px;'>🚀 Sales Manager Live Dashboard</h1>", unsafe_allow_html=True)
     with header_col2:
-        # Online CSS & SVG based Badge representing Tejas Cargo Logo and Truck seamlessly without local files
         st.markdown(
             """
-            <div style="background: linear-gradient(135deg, rgba(247, 37, 133, 0.2), rgba(72, 202, 228, 0.2)); 
-                        border: 1px solid rgba(72, 202, 228, 0.4); padding: 8px 14px; border-radius: 12px; 
-                        text-align: right; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: flex-end; gap: 12px;">
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; padding: 6px 12px; border-radius: 8px; 
+                        text-align: right; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: flex-end; gap: 10px;">
                 <div style="text-align: right;">
-                    <div style="color: #64ffda; font-weight: 900; font-size: 13px; letter-spacing: 0.5px;">TEJAS CARGO INDIA LTD.</div>
-                    <div style="color: #ffffff; font-size: 10px; font-weight: 700;">KEEP MOVING ON 🚛</div>
+                    <div style="color: #0f172a; font-weight: 800; font-size: 12px;">TEJAS CARGO INDIA LTD.</div>
+                    <div style="color: #64748b; font-size: 10px; font-weight: 600;">KEEP MOVING ON 🚛</div>
                 </div>
-                <div style="display: flex; align-items: center; gap: 6px;">
-                    <!-- Company Logo representation icon -->
-                    <div style="width: 32px; height: 32px; background: #f72585; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 8px rgba(247,37,133,0.6);">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+                <div style="display: flex; align-items: center; gap: 4px;">
+                    <div style="width: 28px; height: 28px; background: #e11d48; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
                     </div>
-                    <!-- Truck icon -->
-                    <div style="font-size: 22px; background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 6px;">🚚</div>
+                    <div style="font-size: 18px; background: #f1f5f9; padding: 2px 5px; border-radius: 4px;">🚚</div>
                 </div>
             </div>
             """,
@@ -628,10 +592,9 @@ def main():
     if 'stored_mis_df' not in st.session_state: st.session_state.stored_mis_df = pd.read_pickle(MIS_PATH) if os.path.exists(MIS_PATH) else pd.DataFrame()
     if 'stored_callout_df' not in st.session_state: st.session_state.stored_callout_df = pd.read_pickle(CALLOUT_PATH) if os.path.exists(CALLOUT_PATH) else pd.DataFrame()
 
-    # 🔥 CALLING THE SLOW NEWS TICKER
     render_news_ticker(st.session_state.stored_mis_df)
 
-    st.sidebar.markdown("<h2 style='color:#64ffda; font-size:18px; margin-top:20px;'>📁 Data Management</h2>", unsafe_allow_html=True)
+    st.sidebar.markdown("<h2 style='color:#0f172a; font-size:16px; margin-top:20px;'>📁 Data Management</h2>", unsafe_allow_html=True)
     uploaded_files = st.sidebar.file_uploader("Upload MIS/Callout (Excel/CSV)", type=["xlsx", "csv"], accept_multiple_files=True)
 
     if uploaded_files and st.sidebar.button("💾 Process & Save Data", type="primary"):
@@ -651,7 +614,7 @@ def main():
         st.rerun()
 
     st.sidebar.markdown("---")
-    st.sidebar.markdown("<h2 style='color:#64ffda; font-size:18px;'>📊 Application Views</h2>", unsafe_allow_html=True)
+    st.sidebar.markdown("<h2 style='color:#0f172a; font-size:16px;'>📊 Application Views</h2>", unsafe_allow_html=True)
     
     app_mode = st.sidebar.selectbox("Navigate To:", ["Main MIS Dashboard", "In-Transit Vehicles", "Callout Summary", "Staff Login Portal"])
 
@@ -675,7 +638,7 @@ def main():
             st.warning("Koi MIS data available nahi hai.")
 
     elif app_mode == "Callout Summary":
-        st.markdown("<h2 style='color:#f72585;'>⚠️ Callout / Breakdown Summary</h2>", unsafe_allow_html=True)
+        st.markdown("<h2 style='color:#e11d48;'>⚠️ Callout / Breakdown Summary</h2>", unsafe_allow_html=True)
         if not callout_df.empty:
             st.metric("TOTAL CALLOUT COUNT", len(callout_df))
             st.markdown(render_html_table(callout_df), unsafe_allow_html=True)
@@ -683,7 +646,7 @@ def main():
             st.info("Koi Callout data available nahi hai.")
 
     elif app_mode == "Staff Login Portal":
-        st.markdown("<h2 style='color:#48cae4;'>🔒 Staff Login Portal</h2>", unsafe_allow_html=True)
+        st.markdown("<h2 style='color:#2563eb;'>🔒 Staff Login Portal</h2>", unsafe_allow_html=True)
         staff_col = next((c for c in mis_df.columns if 'controlling' in c.lower() or 'staff' in c.lower()), None)
         if staff_col and not mis_df.empty:
             staff_names = sorted([str(x).strip() for x in mis_df[staff_col].dropna().unique() if str(x).strip() != ""])
