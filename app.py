@@ -411,7 +411,6 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
     # ================= 🔥 CLIENT-WISE PERFORMANCE SECTION (BASE INDEPENDENT OF FILTERS) 🔥 =================
     st.markdown("<br><h3 style='color:#f72585; font-size:22px; margin-bottom:15px;'>🏢 Client-wise Performance Summary</h3>", unsafe_allow_html=True)
     
-    # NOTE: Yeh base dataframe (`reported_df`) par calculate ho raha hai, isliye upar ke live filters change karne par yeh change nahi hoga.
     if client_col_name and client_col_name in reported_df.columns and late_col:
         client_base_df = reported_df.copy()
         client_base_df['Is_OnTime'] = client_base_df[late_col].apply(is_zero_late)
@@ -503,6 +502,66 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
         st.info("Vehicle-wise performance ke liye required columns nahi mile.")
 
 
+# ================= IN-TRANSIT VEHICLE VIEW =================
+def show_in_transit_view(mis_df):
+    st.markdown("<h2 style='color:#48cae4;'>🚚 In-Transit Vehicles (Active Trips)</h2>", unsafe_style=True if 'unsafe_style' in globals() else True)
+    
+    final_rep_col = next((c for c in ['Final Touching Reporting Date & Time', 'Reporting Date & Time', 'Reporting Date'] if c in mis_df.columns), None)
+    if not final_rep_col:
+        final_rep_col = next((c for c in mis_df.columns if 'report' in c.lower()), None)
+
+    if not final_rep_col:
+        st.warning("MIS data mein reporting date column nahi mila.")
+        return
+
+    # 🔥 Filter: Jinka Final Touching Reporting Date & Time BLANK hai (In-Transit)
+    in_transit_df = mis_df[mis_df[final_rep_col].apply(is_blank)].copy()
+
+    if in_transit_df.empty:
+        st.success("🟢 All trips are reported / closed! Koi bhi In-Transit vehicle nahi hai.")
+        return
+
+    st.metric("TOTAL IN-TRANSIT VEHICLES", len(in_transit_df))
+
+    # Optional Quick Search / Filter by Staff or Client if available
+    staff_col = next((c for c in in_transit_df.columns if 'controlling' in c.lower() or 'staff' in c.lower()), None)
+    client_col_name = vendor_column(in_transit_df) or 'VendorName'
+
+    col1, col2 = st.columns(2)
+    with col1:
+        selected_staff_it = st.selectbox("Filter by Staff:", ["ALL"] + sorted([str(x).strip() for x in in_transit_df[staff_col].dropna().unique() if str(x).strip() != ""]) if staff_col else ["ALL"], key="it_staff")
+    with col2:
+        selected_client_it = st.selectbox("Filter by Client:", ["ALL"] + sorted([str(x).strip() for x in in_transit_df[client_col_name].dropna().unique() if str(x).strip() != ""]) if client_col_name in in_transit_df.columns else ["ALL"], key="it_client")
+
+    filtered_it_df = in_transit_df.copy()
+    if selected_staff_it != "ALL" and staff_col:
+        filtered_it_df = filtered_it_df[filtered_it_df[staff_col].astype(str).str.strip() == selected_staff_it]
+    if selected_client_it != "ALL" and client_col_name in filtered_it_df.columns:
+        filtered_it_df = filtered_it_df[filtered_it_df[client_col_name].astype(str).str.strip() == selected_client_it]
+
+    # Desired Columns Selection
+    desired_cols = [
+        'Lorry No.', 'Veh.Type', 'From', 'Destination', 'Party', 'Desp. Date & Time',
+        'Hrs. Given', '1st Touching', '1st Touching Reporting Date & Time', 
+        'Tracking Remark', 'Group Name', 'Controlling Staff Name', 'Foreman Name'
+    ]
+
+    actual_display_cols = []
+    for col in desired_cols:
+        matched_c = next((c for c in filtered_it_df.columns if c.lower().strip() == col.lower().strip()), None)
+        if matched_c: actual_display_cols.append(matched_c)
+
+    if not actual_display_cols: actual_display_cols = [c for c in filtered_it_df.columns if not c.startswith('_')]
+
+    final_it_df = filtered_it_df[actual_display_cols].copy()
+    final_it_df.insert(0, 'S.No', range(1, 1 + len(final_it_df)))
+
+    st.markdown(render_html_table(final_it_df), unsafe_allow_html=True)
+
+    excel_bytes_it = to_excel_bytes({'In_Transit_Vehicles': final_it_df})
+    st.download_button(label="📥 Download In-Transit Excel", data=excel_bytes_it, file_name="In_Transit_Vehicles.xlsx", mime=EXCEL_MIME, type="primary", key="dl_in_transit")
+
+
 # ================= FILE PROCESSING =================
 def process_uploaded_files(uploaded_files):
     callout_dfs, mis_dfs = [], []
@@ -568,7 +627,7 @@ def main():
     st.sidebar.markdown("---")
     st.sidebar.markdown("<h2 style='color:#64ffda; font-size:18px;'>📊 Application Views</h2>", unsafe_allow_html=True)
     
-    app_mode = st.sidebar.selectbox("Navigate To:", ["Main MIS Dashboard", "Callout Summary", "Staff Login Portal"])
+    app_mode = st.sidebar.selectbox("Navigate To:", ["Main MIS Dashboard", "In-Transit Vehicles", "Callout Summary", "Staff Login Portal"])
 
     callout_df = st.session_state.stored_callout_df
     mis_df = st.session_state.stored_mis_df
@@ -580,6 +639,12 @@ def main():
     if app_mode == "Main MIS Dashboard":
         if not mis_df.empty:
             show_reported_vehicle_table(mis_df, unique_key="main")
+        else:
+            st.warning("Koi MIS data available nahi hai.")
+
+    elif app_mode == "In-Transit Vehicles":
+        if not mis_df.empty:
+            show_in_transit_view(mis_df)
         else:
             st.warning("Koi MIS data available nahi hai.")
 
