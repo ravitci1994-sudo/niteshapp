@@ -37,7 +37,7 @@ st.markdown("""
 
     /* Premium Animated Title */
     .premium-title {
-        font-size: 2.8rem;
+        font-size: 2.5rem;
         font-weight: 900;
         text-align: left;
         background: linear-gradient(to right, #ffffff 0%, #48cae4 20%, #f72585 50%, #48cae4 80%, #ffffff 100%);
@@ -47,9 +47,9 @@ st.markdown("""
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         animation: textShine 4s linear infinite;
-        margin-bottom: 10px;
+        margin-bottom: 0px;
         margin-top: 0px;
-        padding-bottom: 5px;
+        padding-bottom: 0px;
     }
     @keyframes textShine { to { background-position: 200% center; } }
     
@@ -504,7 +504,6 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
 
 # ================= IN-TRANSIT VEHICLE VIEW =================
 def show_in_transit_view(mis_df):
-    # 🔥 ERROR FIX: unsafe_allow_html=True use kiya gaya hai yahan
     st.markdown("<h2 style='color:#48cae4;'>🚚 In-Transit Vehicles (Active Trips)</h2>", unsafe_allow_html=True)
     
     final_rep_col = next((c for c in ['Final Touching Reporting Date & Time', 'Reporting Date & Time', 'Reporting Date'] if c in mis_df.columns), None)
@@ -515,7 +514,7 @@ def show_in_transit_view(mis_df):
         st.warning("MIS data mein reporting date column nahi mila.")
         return
 
-    # 🔥 Filter: Jinka Final Touching Reporting Date & Time BLANK hai (In-Transit)
+    # Filter: Jinka Final Touching Reporting Date & Time BLANK hai (In-Transit)
     in_transit_df = mis_df[mis_df[final_rep_col].apply(is_blank)].copy()
 
     if in_transit_df.empty:
@@ -524,7 +523,7 @@ def show_in_transit_view(mis_df):
 
     st.metric("TOTAL IN-TRANSIT VEHICLES", len(in_transit_df))
 
-    # 🔥 Client-wise aur Staff-wise dropdown filters
+    # Client-wise aur Staff-wise dropdown filters
     staff_col = next((c for c in in_transit_df.columns if 'controlling' in c.lower() or 'staff' in c.lower()), None)
     client_col_name = vendor_column(in_transit_df) or 'VendorName'
 
@@ -598,7 +597,16 @@ def process_uploaded_files(uploaded_files):
 
 # ================= MAIN APP =================
 def main():
-    st.markdown("<h1 class='premium-title'>🚀 Sales Manager Live Monitoring Dashboard</h1>", unsafe_allow_html=True)
+    # Top header with Title on left and Truck Image on right corner
+    header_col1, header_col2 = st.columns([4, 1])
+    with header_col1:
+        st.markdown("<h1 class='premium-title' style='padding-top: 10px;'>🚀 Sales Manager Live Monitoring Dashboard</h1>", unsafe_allow_html=True)
+    with header_col2:
+        if os.path.exists("truck_header.png"):
+            st.image("truck_header.png", width=220)
+        else:
+            # Fallback message if image is not placed yet
+            st.markdown("<div style='color: #48cae4; font-size: 11px; text-align: right; border: 1px dashed #48cae4; padding: 10px; border-radius: 8px;'>📷 Save truck image as <b>truck_header.png</b> in folder</div>", unsafe_allow_html=True)
 
     if 'stored_mis_df' not in st.session_state: st.session_state.stored_mis_df = pd.read_pickle(MIS_PATH) if os.path.exists(MIS_PATH) else pd.DataFrame()
     if 'stored_callout_df' not in st.session_state: st.session_state.stored_callout_df = pd.read_pickle(CALLOUT_PATH) if os.path.exists(CALLOUT_PATH) else pd.DataFrame()
@@ -637,7 +645,7 @@ def main():
         st.info("👋 Welcome! Please upload your MIS or Callout files in the sidebar and click 'Process & Save Data' to start.")
         return
 
-    if app_mode == "Main MIS Dashboard":
+    if app_mode == "Main MISDashboard" or app_mode == "Main MIS Dashboard":
         if not mis_df.empty:
             show_reported_vehicle_table(mis_df, unique_key="main")
         else:
