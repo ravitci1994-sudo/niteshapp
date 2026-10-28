@@ -499,7 +499,7 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
         else:
             st.info("No records found for Vehicle Performance matching selected frequency.")
     else:
-        st.info("Vehicle-wise performance ke liye required columns nahi mile.")
+        st.info("Vehicle-wise performance ke liye required columns nahi मिले.")
 
 
 # ================= IN-TRANSIT VEHICLE VIEW =================
@@ -597,26 +597,23 @@ def process_uploaded_files(uploaded_files):
 
 # ================= MAIN APP =================
 def main():
-    # Top header with Title on left and Tejas Cargo Truck Badge/Image on right corner
-    header_col1, header_col2 = st.columns([3.5, 1.5])
+    # Top header with Title on left and Tejas Cargo Truck & Logo on right corner
+    header_col1, header_col2 = st.columns([3, 2])
     with header_col1:
         st.markdown("<h1 class='premium-title' style='padding-top: 5px;'>🚀 Sales Manager Live Monitoring Dashboard</h1>", unsafe_allow_html=True)
     with header_col2:
-        # Beautiful CSS Truck Badge with Tejas Cargo branding so it works instantly without image files
-        st.markdown(
-            """
-            <div style="background: linear-gradient(135deg, rgba(247, 37, 133, 0.2), rgba(72, 202, 228, 0.2)); 
-                        border: 1px solid rgba(72, 202, 228, 0.4); padding: 8px 12px; border-radius: 12px; 
-                        text-align: right; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: flex-end; gap: 10px;">
-                <div>
-                    <div style="color: #64ffda; font-weight: 800; font-size: 14px; letter-spacing: 0.5px;">TEJAS CARGO INDIA LTD.</div>
-                    <div style="color: #ffffff; font-size: 11px; font-weight: 600;">KEEP MOVING ON 🚛</div>
-                </div>
-                <div style="font-size: 24px; background: rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 8px;">🚚</div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+        # Check and render logo and truck image if available, else show fallback badge with logo and truck representation
+        cols_img = st.columns(2)
+        with cols_img[0]:
+            if os.path.exists("logo.png"):
+                st.image("logo.png", width=70)
+            else:
+                st.markdown("<div style='border: 1px dashed #f72585; padding: 5px; text-align: center; color: #f72585; font-size: 10px;'>Logo Missing<br><b>logo.png</b></div>", unsafe_allow_html=True)
+        with cols_img[1]:
+            if os.path.exists("truck_header.png"):
+                st.image("truck_header.png", width=140)
+            else:
+                st.markdown("<div style='border: 1px dashed #48cae4; padding: 5px; text-align: center; color: #48cae4; font-size: 10px;'>Truck Missing<br><b>truck_header.png</b></div>", unsafe_allow_html=True)
 
     if 'stored_mis_df' not in st.session_state: st.session_state.stored_mis_df = pd.read_pickle(MIS_PATH) if os.path.exists(MIS_PATH) else pd.DataFrame()
     if 'stored_callout_df' not in st.session_state: st.session_state.stored_callout_df = pd.read_pickle(CALLOUT_PATH) if os.path.exists(CALLOUT_PATH) else pd.DataFrame()
