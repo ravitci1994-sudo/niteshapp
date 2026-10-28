@@ -37,7 +37,7 @@ st.markdown("""
 
     /* Premium Animated Title */
     .premium-title {
-        font-size: 2.5rem;
+        font-size: 2.3rem;
         font-weight: 900;
         text-align: left;
         background: linear-gradient(to right, #ffffff 0%, #48cae4 20%, #f72585 50%, #48cae4 80%, #ffffff 100%);
@@ -597,16 +597,26 @@ def process_uploaded_files(uploaded_files):
 
 # ================= MAIN APP =================
 def main():
-    # Top header with Title on left and Truck Image on right corner
-    header_col1, header_col2 = st.columns([4, 1])
+    # Top header with Title on left and Tejas Cargo Truck Badge/Image on right corner
+    header_col1, header_col2 = st.columns([3.5, 1.5])
     with header_col1:
-        st.markdown("<h1 class='premium-title' style='padding-top: 10px;'>🚀 Sales Manager Live Monitoring Dashboard</h1>", unsafe_allow_html=True)
+        st.markdown("<h1 class='premium-title' style='padding-top: 5px;'>🚀 Sales Manager Live Monitoring Dashboard</h1>", unsafe_allow_html=True)
     with header_col2:
-        if os.path.exists("truck_header.png"):
-            st.image("truck_header.png", width=220)
-        else:
-            # Fallback message if image is not placed yet
-            st.markdown("<div style='color: #48cae4; font-size: 11px; text-align: right; border: 1px dashed #48cae4; padding: 10px; border-radius: 8px;'>📷 Save truck image as <b>truck_header.png</b> in folder</div>", unsafe_allow_html=True)
+        # Beautiful CSS Truck Badge with Tejas Cargo branding so it works instantly without image files
+        st.markdown(
+            """
+            <div style="background: linear-gradient(135deg, rgba(247, 37, 133, 0.2), rgba(72, 202, 228, 0.2)); 
+                        border: 1px solid rgba(72, 202, 228, 0.4); padding: 8px 12px; border-radius: 12px; 
+                        text-align: right; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: flex-end; gap: 10px;">
+                <div>
+                    <div style="color: #64ffda; font-weight: 800; font-size: 14px; letter-spacing: 0.5px;">TEJAS CARGO INDIA LTD.</div>
+                    <div style="color: #ffffff; font-size: 11px; font-weight: 600;">KEEP MOVING ON 🚛</div>
+                </div>
+                <div style="font-size: 24px; background: rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 8px;">🚚</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
     if 'stored_mis_df' not in st.session_state: st.session_state.stored_mis_df = pd.read_pickle(MIS_PATH) if os.path.exists(MIS_PATH) else pd.DataFrame()
     if 'stored_callout_df' not in st.session_state: st.session_state.stored_callout_df = pd.read_pickle(CALLOUT_PATH) if os.path.exists(CALLOUT_PATH) else pd.DataFrame()
@@ -645,7 +655,7 @@ def main():
         st.info("👋 Welcome! Please upload your MIS or Callout files in the sidebar and click 'Process & Save Data' to start.")
         return
 
-    if app_mode == "Main MISDashboard" or app_mode == "Main MIS Dashboard":
+    if app_mode == "Main MIS Dashboard":
         if not mis_df.empty:
             show_reported_vehicle_table(mis_df, unique_key="main")
         else:
