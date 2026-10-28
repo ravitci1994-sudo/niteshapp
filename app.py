@@ -9,7 +9,7 @@ import html as html_lib
 # 1. Page Configuration
 st.set_page_config(page_title="Sales Manager Live Monitoring Dashboard", layout="wide", initial_sidebar_state="expanded")
 
-# ================= CUSTOM CSS FOR 4K ULTRA-CLEAR THEME WITH TABLE BORDERS =================
+# ================= CUSTOM CSS FOR 4K ULTRA-CLEAR THEME WITH VISIBLE LABELS =================
 st.markdown("""
     <style>
     /* 4K High Definition Background & Global Font Styling */
@@ -41,6 +41,13 @@ st.markdown("""
         margin-top: 0px;
     }
     
+    /* Explicit Styling for Selectbox Labels / Headers so they are clearly visible */
+    [data-testid="stSelectbox"] label {
+        color: #0f172a !important;
+        font-weight: 800 !important;
+        font-size: 14px !important;
+    }
+
     /* 4K News Ticker */
     .news-ticker-container {
         width: 100%;
@@ -136,16 +143,16 @@ st.markdown("""
         top: 0; 
         font-weight: 800; 
         z-index: 2; 
-        border: 1px solid #94a3b8; /* Crisp header border */
+        border: 1px solid #94a3b8;
     }
     .custom-table td { 
         padding: 10px 14px; 
-        border: 1px solid #cbd5e1; /* Sharp grid borders for 4K clarity */
+        border: 1px solid #cbd5e1;
         color: #1e293b; 
         font-weight: 500;
     }
     .custom-table tr:nth-child(even) td {
-        background-color: #f8fafc; /* Subtle striping for clarity */
+        background-color: #f8fafc;
     }
     .custom-table tr:hover td { 
         background-color: #e0f2fe; 
@@ -312,13 +319,13 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
     else:
         st.markdown("<h3 style='color:#0f172a; font-size:16px; font-weight:700;'>🔍 Live Data Filters</h3>", unsafe_allow_html=True)
         f_col1, f_col2, f_col3, f_col4, f_col5, f_col6, f_col7 = st.columns(7)
-        with f_col1: selected_date = st.selectbox("📅 Date:", date_options, index=0, key=f"d_{unique_key}")
-        with f_col2: selected_month = st.selectbox("🗓️ Month:", month_options, index=0, key=f"m_{unique_key}")
-        with f_col3: delay_filter = st.selectbox("🚨 Status:", ["ALL Reported Vehicles", "Only Delay", "Only On-Time"], index=0, key=f"s_{unique_key}")
-        with f_col4: selected_staff = st.selectbox("👨‍💼 Staff:", ["ALL"] + sorted([str(x).strip() for x in reported_df[staff_col].dropna().unique() if str(x).strip() != ""]) if staff_col else ["ALL"], index=0, key=f"st_{unique_key}")
-        with f_col5: selected_client_report = st.selectbox("🏢 Client:", ["ALL"] + sorted([str(x).strip() for x in reported_df[client_col_name].dropna().unique() if str(x).strip() != ""]) if client_col_name in reported_df.columns else ["ALL"], index=0, key=f"c_{unique_key}")
-        with f_col6: selected_delay_hours = st.selectbox("⏱️ Delay Hrs:", ["ALL", "Delay < 10 mins", "Delay < 30 mins", "Delay <= 1 hour"], index=0, key=f"dh_{unique_key}")
-        with f_col7: selected_remarks_filter = st.selectbox("📝 Remarks:", ["ALL", "With Remarks", "Without Remarks (Empty)", "Delay + Without Remarks"], index=0, key=f"r_{unique_key}")
+        with f_col1: selected_date = st.selectbox("📅 Date", date_options, index=0, key=f"d_{unique_key}")
+        with f_col2: selected_month = st.selectbox("🗓️ Month", month_options, index=0, key=f"m_{unique_key}")
+        with f_col3: delay_filter = st.selectbox("🚨 Status", ["ALL Reported Vehicles", "Only Delay", "Only On-Time"], index=0, key=f"s_{unique_key}")
+        with f_col4: selected_staff = st.selectbox("👨‍💼 Staff", ["ALL"] + sorted([str(x).strip() for x in reported_df[staff_col].dropna().unique() if str(x).strip() != ""]) if staff_col else ["ALL"], index=0, key=f"st_{unique_key}")
+        with f_col5: selected_client_report = st.selectbox("🏢 Client", ["ALL"] + sorted([str(x).strip() for x in reported_df[client_col_name].dropna().unique() if str(x).strip() != ""]) if client_col_name in reported_df.columns else ["ALL"], index=0, key=f"c_{unique_key}")
+        with f_col6: selected_delay_hours = st.selectbox("⏱️ Delay Hrs", ["ALL", "Delay < 10 mins", "Delay < 30 mins", "Delay <= 1 hour"], index=0, key=f"dh_{unique_key}")
+        with f_col7: selected_remarks_filter = st.selectbox("📝 Remarks", ["ALL", "With Remarks", "Without Remarks (Empty)", "Delay + Without Remarks"], index=0, key=f"r_{unique_key}")
 
         strict_week_options = ["Last 1 Week", "Last 2 Weeks", "Last 3 Weeks", "Last 4 Weeks"]
         available_weeks = [w for w in strict_week_options if w in reported_df['_Rel_Week'].unique()]
@@ -459,10 +466,10 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
         
         freq_options = ["ALL", "> 1 Delay", "> 2 Delays", "> 3 Delays", "> 4 Delays", "> 5 Delays"]
         
-        with v_f1: sel_veh_staff = st.selectbox("👨‍💼 Controlling Staff:", veh_staff_list, key=f"vs_{unique_key}")
-        with v_f2: sel_veh_client = st.selectbox("🏢 Client:", veh_client_list, key=f"vc_{unique_key}")
-        with v_f3: sel_veh_freq = st.selectbox("🔄 Delay Frequency:", freq_options, key=f"vf_{unique_key}")
-        with v_f4: sel_veh_status = st.selectbox("⚖️ Delay/On-time:", ["ALL", "Only On-Time", "Only Delay"], key=f"vst_{unique_key}")
+        with v_f1: sel_veh_staff = st.selectbox("👨‍💼 Controlling Staff", veh_staff_list, key=f"vs_{unique_key}")
+        with v_f2: sel_veh_client = st.selectbox("🏢 Client", veh_client_list, key=f"vc_{unique_key}")
+        with v_f3: sel_veh_freq = st.selectbox("🔄 Delay Frequency", freq_options, key=f"vf_{unique_key}")
+        with v_f4: sel_veh_status = st.selectbox("⚖️ Delay/On-time", ["ALL", "Only On-Time", "Only Delay"], key=f"vst_{unique_key}")
 
         veh_df = temp_veh_df.copy()
         if sel_veh_staff != "ALL" and staff_col: veh_df = veh_df[veh_df[staff_col].astype(str).str.strip() == sel_veh_staff]
@@ -524,9 +531,9 @@ def show_in_transit_view(mis_df):
 
     col1, col2 = st.columns(2)
     with col1:
-        selected_staff_it = st.selectbox("Filter by Staff:", ["ALL"] + sorted([str(x).strip() for x in in_transit_df[staff_col].dropna().unique() if str(x).strip() != ""]) if staff_col else ["ALL"], key="it_staff")
+        selected_staff_it = st.selectbox("Filter by Staff", ["ALL"] + sorted([str(x).strip() for x in in_transit_df[staff_col].dropna().unique() if str(x).strip() != ""]) if staff_col else ["ALL"], key="it_staff")
     with col2:
-        selected_client_it = st.selectbox("Filter by Client:", ["ALL"] + sorted([str(x).strip() for x in in_transit_df[client_col_name].dropna().unique() if str(x).strip() != ""]) if client_col_name in in_transit_df.columns else ["ALL"], key="it_client")
+        selected_client_it = st.selectbox("Filter by Client", ["ALL"] + sorted([str(x).strip() for x in in_transit_df[client_col_name].dropna().unique() if str(x).strip() != ""]) if client_col_name in in_transit_df.columns else ["ALL"], key="it_client")
 
     filtered_it_df = in_transit_df.copy()
     if selected_staff_it != "ALL" and staff_col:
