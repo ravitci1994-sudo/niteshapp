@@ -504,7 +504,8 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None):
 
 # ================= IN-TRANSIT VEHICLE VIEW =================
 def show_in_transit_view(mis_df):
-    st.markdown("<h2 style='color:#48cae4;'>🚚 In-Transit Vehicles (Active Trips)</h2>", unsafe_style=True if 'unsafe_style' in globals() else True)
+    # 🔥 ERROR FIX: unsafe_allow_html=True use kiya gaya hai yahan
+    st.markdown("<h2 style='color:#48cae4;'>🚚 In-Transit Vehicles (Active Trips)</h2>", unsafe_allow_html=True)
     
     final_rep_col = next((c for c in ['Final Touching Reporting Date & Time', 'Reporting Date & Time', 'Reporting Date'] if c in mis_df.columns), None)
     if not final_rep_col:
@@ -523,7 +524,7 @@ def show_in_transit_view(mis_df):
 
     st.metric("TOTAL IN-TRANSIT VEHICLES", len(in_transit_df))
 
-    # Optional Quick Search / Filter by Staff or Client if available
+    # 🔥 Client-wise aur Staff-wise dropdown filters
     staff_col = next((c for c in in_transit_df.columns if 'controlling' in c.lower() or 'staff' in c.lower()), None)
     client_col_name = vendor_column(in_transit_df) or 'VendorName'
 
