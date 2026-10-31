@@ -621,8 +621,24 @@ def main():
             unsafe_allow_html=True
         )
 
-    if 'stored_mis_df' not in st.session_state: st.session_state.stored_mis_df = pd.read_pickle(MIS_PATH) if os.path.exists(MIS_PATH) else pd.DataFrame()
-    if 'stored_callout_df' not in st.session_state: st.session_state.stored_callout_df = pd.read_pickle(CALLOUT_PATH) if os.path.exists(CALLOUT_PATH) else pd.DataFrame()
+    # 🔥 PERSISTENT SESSION STATE: Load from saved_data pickle files automatically on refresh
+    if 'stored_mis_df' not in st.session_state:
+        if os.path.exists(MIS_PATH):
+            try:
+                st.session_state.stored_mis_df = pd.read_pickle(MIS_PATH)
+            except:
+                st.session_state.stored_mis_df = pd.DataFrame()
+        else:
+            st.session_state.stored_mis_df = pd.DataFrame()
+
+    if 'stored_callout_df' not in st.session_state:
+        if os.path.exists(CALLOUT_PATH):
+            try:
+                st.session_state.stored_callout_df = pd.read_pickle(CALLOUT_PATH)
+            except:
+                st.session_state.stored_callout_df = pd.DataFrame()
+        else:
+            st.session_state.stored_callout_df = pd.DataFrame()
 
     render_news_ticker(st.session_state.stored_mis_df)
 
@@ -631,11 +647,13 @@ def main():
 
     if uploaded_files and st.sidebar.button("💾 Process & Save Data", type="primary"):
         c_df, m_df = process_uploaded_files(uploaded_files)
-        st.session_state.stored_callout_df = c_df
-        st.session_state.stored_mis_df = m_df
-        c_df.to_pickle(CALLOUT_PATH)
-        m_df.to_pickle(MIS_PATH)
-        st.sidebar.success("Saved successfully!")
+        if not c_df.empty:
+            st.session_state.stored_callout_df = c_df
+            c_df.to_pickle(CALLOUT_PATH)
+        if not m_df.empty:
+            st.session_state.stored_mis_df = m_df
+            m_df.to_pickle(MIS_PATH)
+        st.sidebar.success("Data processed and permanently saved successfully!")
         st.rerun()
 
     if st.sidebar.button("🗑️ Clear Dashboard Data"):
@@ -643,6 +661,7 @@ def main():
         st.session_state.stored_mis_df = pd.DataFrame()
         if os.path.exists(CALLOUT_PATH): os.remove(CALLOUT_PATH)
         if os.path.exists(MIS_PATH): os.remove(MIS_PATH)
+        st.sidebar.success("Data cleared successfully!")
         st.rerun()
 
     st.sidebar.markdown("---")
@@ -654,7 +673,7 @@ def main():
     mis_df = st.session_state.stored_mis_df
 
     if mis_df.empty and callout_df.empty:
-        st.info("👋 Welcome! Please upload your MIS or Callout files in the sidebar and click 'Process & Save Data' to start.")
+        st.info("👋 Welcome! Please upload your MIS or Callout files in the sidebar and click 'Process & Save Data' to start. Once saved, your data will persist across page refreshes.")
         return
 
     if app_mode == "Main MIS Dashboard":
