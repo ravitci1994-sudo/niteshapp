@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+import streamlit.components.v1 as components
 import math
 import io
 import os
@@ -99,7 +100,7 @@ st.markdown("""
         100% { transform: translateX(-100%); }
     }
 
-    /* Streamlit Selectbox Enhancements (3D Dark Card style) */
+    /* Streamlit Selectbox Enhancements */
     .stSelectbox div[data-baseweb="select"] > div {
         background-color: rgba(30, 27, 75, 0.8) !important;
         border: 1px solid rgba(124, 58, 237, 0.4) !important;
@@ -649,7 +650,33 @@ def main():
 
     render_news_ticker(st.session_state.stored_mis_df)
 
+    # 🕒 LIVE CLOCK WIDGET IN SIDEBAR (LEFT CORNER)
+    clock_html = """
+    <div style="background: rgba(30, 27, 75, 0.8); border: 1px solid rgba(124, 58, 237, 0.4); padding: 10px; border-radius: 8px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); margin-bottom: 20px;">
+        <div style="color: #94a3b8; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Live Local Time</div>
+        <div id="live-clock" style="color: #38bdf8; font-size: 16px; font-weight: 800; font-family: monospace;"></div>
+    </div>
+    <script>
+    function updateClock() {
+        var now = new Date();
+        var hours = now.getHours();
+        var minutes = now.getMinutes();
+        var seconds = now.getSeconds();
+        var ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+        minutes = minutes < 10 ? '0'+minutes : minutes;
+        seconds = seconds < 10 ? '0'+seconds : seconds;
+        var strTime = hours + ':' + minutes + ':' + seconds + ' ' + ampm;
+        document.getElementById('live-clock').innerHTML = strTime;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+    </script>
+    """
     st.sidebar.markdown("<h2 style='color:#f8fafc; font-size:16px; margin-top:20px; font-weight:800;'>📁 Data Management</h2>", unsafe_allow_html=True)
+    components.html(clock_html, height=75)
+
     uploaded_files = st.sidebar.file_uploader("Upload MIS/Callout (Excel/CSV)", type=["xlsx", "csv"], accept_multiple_files=True)
 
     if uploaded_files and st.sidebar.button("💾 Process & Save Data", type="primary"):
