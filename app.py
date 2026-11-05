@@ -8,7 +8,7 @@ import pickle
 
 # 1. Page Configuration
 st.set_page_config(
-    page_title="3D Motion Animated EV Dashboard",
+    page_title="Fleet Dashboard",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -210,7 +210,7 @@ st.markdown(
     }
     
     .custom-table tr {
-        transition: all 0.2s ease-in-out;
+        transition: all 0.25s ease-in-out;
     }
     
     .custom-table tr:hover td { 
@@ -1258,7 +1258,7 @@ def main():
     header_col1, header_col2 = st.columns([3, 2])
     with header_col1:
         st.markdown(
-            "<h1 class='premium-title' style='padding-top: 5px;'>⚡ 3D Motion EV Dashboard</h1>",
+            "<h1 class='premium-title' style='padding-top: 5px;'>⚡ Fleet Dashboard</h1>",
             unsafe_allow_html=True,
         )
     with header_col2:
@@ -1279,7 +1279,7 @@ def main():
 
     # Sidebar File Upload & Management
     with st.sidebar:
-        st.markdown("<h2 style='color:#38bdf8; font-size: 18px; font-weight:800;'>⚡ 3D Control Panel</h2>", unsafe_allow_html=True)
+        st.markdown("<h2 style='color:#38bdf8; font-size: 18px; font-weight:800;'>⚙️ 3D Control Panel</h2>", unsafe_allow_html=True)
         uploaded_files = st.file_uploader("Upload MIS Files", type=["xlsx", "xls", "csv"], accept_multiple_files=True)
 
         if uploaded_files:
