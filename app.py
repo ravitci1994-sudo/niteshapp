@@ -8,64 +8,72 @@ import pickle
 
 # 1. Page Configuration
 st.set_page_config(
-    page_title="Sales Manager Live Dashboard - EV Cockpit",
+    page_title="3D Motion Animated EV Dashboard",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# ================= CUSTOM CSS FOR EV COCKPIT / FUTURISTIC DASHBOARD THEME =================
+# ================= CUSTOM CSS FOR 3D DEPTH & MOTION ANIMATIONS =================
 st.markdown(
     """
     <style>
-    /* 1. Deep Cockpit Blue & Midnight Background */
+    /* 1. Deep Cockpit 3D Background */
     .main, [data-testid="stAppViewContainer"] {
-        background: radial-gradient(circle at 50% 0%, #151b3b 0%, #080b1e 70%, #03040a 100%) !important;
+        background: radial-gradient(circle at 50% 0%, #1a2342 0%, #090d1f 70%, #03040a 100%) !important;
         color: #e2e8f0 !important;
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
     }
 
-    /* 2. Sleek Custom Scrollbar */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #080b1e; }
-    ::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.3); border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: #38bdf8; }
-
-    /* 3. Glassmorphic Cockpit Sidebar */
+    /* 2. Glassmorphic 3D Sidebar with Slide Motion */
     [data-testid="stSidebar"] {
-        background: rgba(15, 23, 42, 0.85) !important;
-        backdrop-filter: blur(20px) !important;
-        border-right: 1px solid rgba(56, 189, 248, 0.15);
+        background: rgba(15, 23, 42, 0.9) !important;
+        backdrop-filter: blur(25px) !important;
+        border-right: 1px solid rgba(56, 189, 248, 0.2);
+        box-shadow: 10px 0 30px rgba(0, 0, 0, 0.5);
+        animation: slideInSidebar 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    
+    @keyframes slideInSidebar {
+        from { transform: translateX(-100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
     }
 
-    /* 4. Futuristic Neon Glowing Title */
+    /* 3. 3D Glowing Neon Typography Title */
     .premium-title {
-        font-size: 2.2rem;
+        font-size: 2.3rem;
         font-weight: 900;
-        background: linear-gradient(90deg, #ffffff 20%, #38bdf8 60%, #ff7630 100%);
+        background: linear-gradient(135deg, #ffffff 20%, #38bdf8 60%, #ff7630 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         letter-spacing: -0.5px;
         margin-bottom: 0px;
         margin-top: 0px;
-        text-shadow: 0 0 30px rgba(56, 189, 248, 0.2);
+        text-shadow: 0 10px 25px rgba(56, 189, 248, 0.3);
+        transform: perspective(500px) translateZ(10px);
+        transition: transform 0.3s ease;
+    }
+    
+    .premium-title:hover {
+        transform: perspective(500px) translateZ(20px) scale(1.01);
     }
 
-    /* 5. HUD Style News Ticker */
+    /* 4. HUD Style News Ticker with Motion */
     .news-ticker-container {
         width: 100%;
-        background: linear-gradient(90deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.9));
-        border: 1px solid rgba(56, 189, 248, 0.3);
+        background: linear-gradient(90deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
+        border: 1px solid rgba(56, 189, 248, 0.4);
         color: #f1f5f9;
         overflow: hidden;
         white-space: nowrap;
         box-sizing: border-box;
-        border-radius: 14px;
+        border-radius: 16px;
         margin-bottom: 25px;
-        box-shadow: 0 0 20px rgba(56, 189, 248, 0.15);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 0 15px rgba(56, 189, 248, 0.1);
         position: relative;
         display: flex;
         align-items: center;
-        height: 42px;
+        height: 44px;
+        transform: perspective(800px) rotateX(2deg);
     }
     
     .ticker-label {
@@ -79,10 +87,11 @@ st.markdown(
         position: absolute;
         left: 0;
         z-index: 10;
-        border-radius: 14px 0 0 14px;
+        border-radius: 16px 0 0 16px;
         text-transform: uppercase;
         letter-spacing: 1px;
         font-size: 12px;
+        box-shadow: 5px 0 15px rgba(0,0,0,0.3);
     }
     
     .ticker-text-wrapper {
@@ -105,7 +114,7 @@ st.markdown(
         100% { transform: translateX(-50%); }
     }
 
-    /* 6. Cockpit Selectboxes & Input Fields */
+    /* 5. 3D Floating Selectboxes & Inputs */
     [data-testid="stSelectbox"] label {
         color: #38bdf8 !important;
         font-weight: 700 !important;
@@ -115,46 +124,59 @@ st.markdown(
     }
 
     .stSelectbox div[data-baseweb="select"] > div {
-        background: rgba(30, 41, 59, 0.8) !important;
-        border: 1px solid rgba(56, 189, 248, 0.3) !important;
-        border-radius: 12px !important;
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9)) !important;
+        border: 1px solid rgba(56, 189, 248, 0.4) !important;
+        border-radius: 14px !important;
         color: #ffffff !important;
         font-weight: 500;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-        transition: all 0.3s ease;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(56, 189, 248, 0.1);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
     }
     
     .stSelectbox div[data-baseweb="select"] > div:hover {
         border-color: #38bdf8 !important;
-        box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+        transform: translateY(-3px) scale(1.01);
+        box-shadow: 0 12px 30px rgba(56, 189, 248, 0.3);
     }
 
-    /* 7. EV Neon Orange & Blue Buttons */
+    /* 6. Motion Animated 3D Action Buttons */
     .stButton > button {
         background: linear-gradient(135deg, #ff7630, #f97316) !important;
         border: none !important;
         color: white !important;
-        border-radius: 12px !important;
+        border-radius: 14px !important;
         font-weight: 700 !important;
-        box-shadow: 0 0 15px rgba(249, 115, 22, 0.4) !important;
-        transition: all 0.3s ease;
+        box-shadow: 0 10px 25px rgba(249, 115, 22, 0.4), inset 0 2px 5px rgba(255, 255, 255, 0.3) !important;
+        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+        transform: perspective(400px) translateZ(0px);
     }
     
     .stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 0 25px rgba(249, 115, 22, 0.7) !important;
+        transform: perspective(400px) translateZ(10px) translateY(-3px) scale(1.02) !important;
+        box-shadow: 0 15px 35px rgba(249, 115, 22, 0.7), inset 0 2px 8px rgba(255, 255, 255, 0.5) !important;
+    }
+    
+    .stButton > button:active {
+        transform: perspective(400px) translateZ(-5px) translateY(1px) scale(0.98) !important;
     }
 
-    /* 8. Cockpit HUD Glass Tables */
+    /* 7. 3D Floating Glass Tables with Smooth Entry Animation */
     .custom-table-container {
         overflow-x: auto; 
         max-height: 500px;
-        border: 1px solid rgba(56, 189, 248, 0.25);
-        border-radius: 16px;
-        background: rgba(15, 23, 42, 0.75);
-        backdrop-filter: blur(20px);
-        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6), inset 0 0 20px rgba(56, 189, 248, 0.05);
+        border: 1px solid rgba(56, 189, 248, 0.3);
+        border-radius: 18px;
+        background: linear-gradient(135deg, rgba(20, 27, 48, 0.85), rgba(10, 15, 30, 0.95));
+        backdrop-filter: blur(25px);
+        box-shadow: 0 20px 45px rgba(0, 0, 0, 0.7), inset 0 0 20px rgba(56, 189, 248, 0.08);
         margin-bottom: 25px;
+        transform: perspective(1000px);
+        animation: fadeInTable 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    
+    @keyframes fadeInTable {
+        from { opacity: 0; transform: perspective(1000px) rotateX(5px) translateY(20px); }
+        to { opacity: 1; transform: perspective(1000px) rotateX(0deg) translateY(0); }
     }
 
     .custom-table { 
@@ -165,53 +187,68 @@ st.markdown(
     }
     
     .custom-table th { 
-        background: rgba(30, 41, 59, 0.95); 
+        background: rgba(30, 41, 59, 0.98); 
         color: #38bdf8; 
-        padding: 12px 16px; 
+        padding: 14px 16px; 
         text-align: left; 
         position: sticky; 
         top: 0; 
         font-weight: 800; 
         z-index: 2; 
-        border-bottom: 1px solid rgba(56, 189, 248, 0.3);
+        border-bottom: 1px solid rgba(56, 189, 248, 0.4);
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.8px;
         font-size: 11px;
     }
     
     .custom-table td { 
-        padding: 11px 16px; 
-        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        padding: 12px 16px; 
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         color: #e2e8f0; 
         font-weight: 500;
+        transition: all 0.2s ease;
+    }
+    
+    .custom-table tr {
+        transition: all 0.2s ease-in-out;
     }
     
     .custom-table tr:hover td { 
-        background-color: rgba(56, 189, 248, 0.12); 
-        color: #ffffff; 
+        background-color: rgba(56, 189, 248, 0.18); 
+        color: #ffffff;
+        box-shadow: inset 0 0 12px rgba(56, 189, 248, 0.2);
     }
 
-    /* 9. Sleek Tabs Styling */
+    /* 8. 3D Animated Tabs */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 10px;
-        background-color: rgba(15, 23, 42, 0.6);
-        padding: 6px;
-        border-radius: 14px;
-        border: 1px solid rgba(56, 189, 248, 0.2);
+        gap: 12px;
+        background-color: rgba(15, 23, 42, 0.7);
+        padding: 8px;
+        border-radius: 16px;
+        border: 1px solid rgba(56, 189, 248, 0.25);
+        box-shadow: inset 0 4px 10px rgba(0,0,0,0.4);
     }
 
     .stTabs [data-baseweb="tab"] {
-        height: 38px;
-        border-radius: 10px;
+        height: 40px;
+        border-radius: 12px;
         font-weight: 700;
         color: #94a3b8;
         border: none !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .stTabs [data-baseweb="tab"]:hover {
+        color: #38bdf8;
+        background: rgba(56, 189, 248, 0.1);
+        transform: translateY(-2px);
     }
 
     .stTabs [aria-selected="true"] {
         background: linear-gradient(135deg, #38bdf8, #0284c7) !important;
         color: #0f172a !important;
-        box-shadow: 0 0 15px rgba(56, 189, 248, 0.4) !important;
+        box-shadow: 0 5px 20px rgba(56, 189, 248, 0.5), inset 0 2px 4px rgba(255,255,255,0.4) !important;
+        transform: scale(1.02);
     }
     </style>
 """,
@@ -336,7 +373,7 @@ def to_excel_bytes(sheets):
 # ================= NEWS TICKER COMPONENT =================
 def render_news_ticker(df):
     if df.empty:
-        ticker_text = "⚡ SYSTEM COCKPIT READY... WAITING FOR DATA UPLOAD... PLEASE UPLOAD MIS FILE FROM SIDEBAR..."
+        ticker_text = "⚡ 3D COCKPIT READY... WAITING FOR DATA UPLOAD... PLEASE UPLOAD MIS FILE FROM SIDEBAR..."
     else:
         late_col = next(
             (c for c in ["Late Hrs", "Delay Hrs", "Delay"] if c in df.columns),
@@ -371,14 +408,14 @@ def render_news_ticker(df):
                 if not top_client.empty:
                     client_text = f" | 🏢 TOP CLIENT: {top_client.index[0]} ({top_client.iloc[0]} Trips)"
 
-            ticker_text = f"🚀 COCKPIT STATUS: Total Trips: {total} | ✅ On-Time: {on_time_pct}% | ⚠️ Delayed: {delayed}{staff_text}{client_text}"
+            ticker_text = f"🚀 3D HUD STATUS: Total Trips: {total} | ✅ On-Time: {on_time_pct}% | ⚠️ Delayed: {delayed}{staff_text}{client_text}"
         else:
-            ticker_text = f"🚀 SYSTEM HUD: Active Trips: {len(df)} | 🟢 ALL SYSTEMS NORMAL"
+            ticker_text = f"🚀 3D SYSTEM HUD: Active Trips: {len(df)} | 🟢 ALL SYSTEMS NORMAL"
 
     full_text = f"<span class='ticker-item'>{ticker_text}</span>" * 4
 
     html_out = f"""<div class="news-ticker-container">
-<div class="ticker-label">HUD LIVE</div>
+<div class="ticker-label">3D HUD</div>
 <div class="ticker-text-wrapper">{full_text}</div>
 </div>"""
     st.markdown(html_out, unsafe_allow_html=True)
@@ -509,7 +546,7 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None, only_delay
         )
     else:
         st.markdown(
-            "<h3 style='color:#38bdf8; font-size:16px; font-weight:700;'>🔍 Cockpit HUD Filters</h3>",
+            "<h3 style='color:#38bdf8; font-size:16px; font-weight:700;'>🔍 3D Motion HUD Filters</h3>",
             unsafe_allow_html=True,
         )
         f_col1, f_col2, f_col3, f_col4, f_col5, f_col6, f_col7 = st.columns(7)
@@ -783,7 +820,7 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None, only_delay
     if not only_delay:
         # ================= CLIENT-WISE PERFORMANCE SECTION =================
         st.markdown(
-            "<br><h3 style='color:#38bdf8; font-size:18px; font-weight:800; margin-bottom:15px;'>🏢 Client-wise Performance HUD</h3>",
+            "<br><h3 style='color:#38bdf8; font-size:18px; font-weight:800; margin-bottom:15px;'>🏢 Client-wise Performance 3D HUD</h3>",
             unsafe_allow_html=True,
         )
 
@@ -846,7 +883,7 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None, only_delay
 
         # ================= VEHICLE-WISE PERFORMANCE SECTION =================
         st.markdown(
-            "<br><h3 style='color:#38bdf8; font-size:18px; font-weight:800; margin-bottom:15px;'>🚛 Vehicle-wise Performance HUD</h3>",
+            "<br><h3 style='color:#38bdf8; font-size:18px; font-weight:800; margin-bottom:15px;'>🚛 Vehicle-wise Performance 3D HUD</h3>",
             unsafe_allow_html=True,
         )
 
@@ -1035,7 +1072,7 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None, only_delay
 # ================= IN-TRANSIT VEHICLE VIEW =================
 def show_in_transit_view(mis_df):
     st.markdown(
-        "<h2 style='color:#38bdf8; font-weight:800;'>🚚 In-Transit Active Trips HUD</h2>",
+        "<h2 style='color:#38bdf8; font-weight:800;'>🚚 In-Transit Active Trips 3D HUD</h2>",
         unsafe_allow_html=True,
     )
 
@@ -1221,28 +1258,28 @@ def main():
     header_col1, header_col2 = st.columns([3, 2])
     with header_col1:
         st.markdown(
-            "<h1 class='premium-title' style='padding-top: 5px;'>⚡ EV Cockpit Dashboard</h1>",
+            "<h1 class='premium-title' style='padding-top: 5px;'>⚡ 3D Motion EV Dashboard</h1>",
             unsafe_allow_html=True,
         )
     with header_col2:
         st.markdown(
             """
             <div style="background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(20px); border: 1px solid rgba(56, 189, 248, 0.3); padding: 8px 16px; border-radius: 14px; 
-                        text-align: right; box-shadow: 0 0 20px rgba(56, 189, 248, 0.1); display: flex; align-items: center; justify-content: flex-end; gap: 12px;">
+                        text-align: right; box-shadow: 0 10px 25px rgba(56, 189, 248, 0.15); display: flex; align-items: center; justify-content: flex-end; gap: 12px;">
                 <div style="text-align: right;">
                     <div style="color: #38bdf8; font-weight: 800; font-size: 13px;">TEJAS CARGO INDIA LTD.</div>
-                    <div style="color: #94a3b8; font-size: 11px; font-weight: 600;">LIVE COCKPIT HUD</div>
+                    <div style="color: #94a3b8; font-size: 11px; font-weight: 600;">3D MOTION COCKPIT</div>
                 </div>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
-    st.markdown("<hr style='border:0; height:1px; background:rgba(56, 189, 248, 0.2); margin: 15px 0 20px 0;'>", unsafe_allow_html=True)
+    st.markdown("<hr style='border:0; height:1px; background:rgba(56, 189, 248, 0.25); margin: 15px 0 20px 0;'>", unsafe_allow_html=True)
 
     # Sidebar File Upload & Management
     with st.sidebar:
-        st.markdown("<h2 style='color:#38bdf8; font-size: 18px; font-weight:800;'>⚡ Cockpit Data Panel</h2>", unsafe_allow_html=True)
+        st.markdown("<h2 style='color:#38bdf8; font-size: 18px; font-weight:800;'>⚡ 3D Control Panel</h2>", unsafe_allow_html=True)
         uploaded_files = st.file_uploader("Upload MIS Files", type=["xlsx", "xls", "csv"], accept_multiple_files=True)
 
         if uploaded_files:
