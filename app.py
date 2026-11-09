@@ -1,75 +1,64 @@
-import streamlit as st
-import pandas as pd
-from datetime import datetime
+import html as html_lib
 import io
 import os
-import html as html_lib
 import pickle
+from datetime import datetime
+
+import pandas as pd
+import streamlit as st
 
 # 1. Page Configuration
 st.set_page_config(
-    page_title="Fleet Dashboard - Glassy Motion UI",
+    page_title="Tejas Fleet Dashboard - Dark Gold UI",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# ================= CUSTOM CSS FOR GLASSMORPHIC MOTION UI =================
+# ================= CUSTOM CSS FOR DARK GOLD GLASSMORPHIC UI =================
 st.markdown(
     """
     <style>
-    /* 1. Deep Futuristic Glassmorphic Background */
+    /* 1. Deep Futuristic Dark Gold Background */
     .main, [data-testid="stAppViewContainer"] {
-        background: radial-gradient(circle at 50% 0%, #131b36 0%, #070a17 70%, #020308 100%) !important;
-        color: #f1f5f9 !important;
+        background: radial-gradient(circle at 50% 0%, #1a1714 0%, #0d0b0a 70%, #050404 100%) !important;
+        color: #f3f4f6 !important;
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
     }
 
-    /* 2. Sleek Glassmorphic Sidebar with Smooth Motion */
+    /* 2. Sleek Glassmorphic Sidebar */
     [data-testid="stSidebar"] {
-        background: rgba(15, 23, 42, 0.75) !important;
+        background: rgba(20, 18, 16, 0.85) !important;
         backdrop-filter: blur(25px) !important;
-        border-right: 1px solid rgba(56, 189, 248, 0.2);
-        box-shadow: 15px 0 35px rgba(0, 0, 0, 0.6);
-        animation: slideSidebar 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    
-    @keyframes slideSidebar {
-        from { transform: translateX(-100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
+        border-right: 1px solid rgba(245, 158, 11, 0.15);
+        box-shadow: 15px 0 35px rgba(0, 0, 0, 0.8);
     }
 
-    /* 3. Glowing Neon 3D Typography Title */
+    /* 3. Glowing Amber Typography Title */
     .premium-title {
         font-size: 2.4rem;
         font-weight: 900;
-        background: linear-gradient(135deg, #ffffff 15%, #38bdf8 55%, #f97316 100%);
+        background: linear-gradient(135deg, #ffffff 20%, #f59e0b 60%, #d97706 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         letter-spacing: -0.8px;
         margin-bottom: 0px;
         margin-top: 0px;
-        text-shadow: 0 15px 30px rgba(56, 189, 248, 0.25);
-        transform: perspective(600px) translateZ(12px);
-        transition: transform 0.3s ease;
-    }
-    
-    .premium-title:hover {
-        transform: perspective(600px) translateZ(22px) scale(1.01);
+        text-shadow: 0 15px 30px rgba(245, 158, 11, 0.2);
     }
 
     /* 4. Motion HUD News Ticker */
     .news-ticker-container {
         width: 100%;
-        background: rgba(15, 23, 42, 0.85);
-        border: 1px solid rgba(56, 189, 248, 0.35);
+        background: rgba(26, 22, 18, 0.85);
+        border: 1px solid rgba(245, 158, 11, 0.3);
         backdrop-filter: blur(20px);
-        color: #f1f5f9;
+        color: #f3f4f6;
         overflow: hidden;
         white-space: nowrap;
         box-sizing: border-box;
-        border-radius: 18px;
+        border-radius: 16px;
         margin-bottom: 25px;
-        box-shadow: 0 12px 35px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(56, 189, 248, 0.08);
+        box-shadow: 0 12px 35px rgba(0, 0, 0, 0.6), inset 0 0 20px rgba(245, 158, 11, 0.05);
         position: relative;
         display: flex;
         align-items: center;
@@ -77,8 +66,8 @@ st.markdown(
     }
     
     .ticker-label {
-        background: linear-gradient(135deg, #38bdf8, #0284c7);
-        color: #030712;
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        color: #0f0e0d;
         font-weight: 900;
         padding: 0 18px;
         height: 100%;
@@ -87,7 +76,7 @@ st.markdown(
         position: absolute;
         left: 0;
         z-index: 10;
-        border-radius: 18px 0 0 18px;
+        border-radius: 16px 0 0 16px;
         text-transform: uppercase;
         letter-spacing: 1px;
         font-size: 12px;
@@ -106,7 +95,7 @@ st.markdown(
         padding: 0 40px;
         font-size: 14px;
         font-weight: 600;
-        color: #cbd5e1;
+        color: #d1d5db;
     }
     
     @keyframes marquee {
@@ -114,9 +103,9 @@ st.markdown(
         100% { transform: translateX(-50%); }
     }
 
-    /* 5. Glassmorphic Floating Selectboxes */
+    /* 5. Glassmorphic Selectboxes */
     [data-testid="stSelectbox"] label {
-        color: #38bdf8 !important;
+        color: #f59e0b !important;
         font-weight: 700 !important;
         font-size: 12px !important;
         text-transform: uppercase;
@@ -124,60 +113,47 @@ st.markdown(
     }
 
     .stSelectbox div[data-baseweb="select"] > div {
-        background: rgba(30, 41, 59, 0.75) !important;
+        background: rgba(30, 26, 22, 0.8) !important;
         backdrop-filter: blur(15px) !important;
-        border: 1px solid rgba(56, 189, 248, 0.35) !important;
-        border-radius: 16px !important;
+        border: 1px solid rgba(245, 158, 11, 0.3) !important;
+        border-radius: 14px !important;
         color: #ffffff !important;
         font-weight: 500;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), inset 0 0 12px rgba(56, 189, 248, 0.08);
-        transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        transition: all 0.3s ease !important;
     }
     
     .stSelectbox div[data-baseweb="select"] > div:hover {
-        border-color: #38bdf8 !important;
-        transform: translateY(-3px) scale(1.01);
-        box-shadow: 0 15px 35px rgba(56, 189, 248, 0.35);
+        border-color: #f59e0b !important;
+        box-shadow: 0 15px 35px rgba(245, 158, 11, 0.25);
     }
 
-    /* 6. Fluid Motion Buttons */
+    /* 6. Amber Glow Buttons */
     .stButton > button {
-        background: linear-gradient(135deg, #f97316, #ea580c) !important;
+        background: linear-gradient(135deg, #f59e0b, #d97706) !important;
         border: none !important;
-        color: white !important;
-        border-radius: 16px !important;
-        font-weight: 700 !important;
-        box-shadow: 0 10px 25px rgba(249, 115, 22, 0.4), inset 0 2px 6px rgba(255, 255, 255, 0.3) !important;
-        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
-        transform: perspective(400px) translateZ(0px);
+        color: #0f0e0d !important;
+        border-radius: 14px !important;
+        font-weight: 800 !important;
+        box-shadow: 0 10px 25px rgba(245, 158, 11, 0.35) !important;
+        transition: all 0.3s ease !important;
     }
     
     .stButton > button:hover {
-        transform: perspective(400px) translateZ(12px) translateY(-3px) scale(1.02) !important;
-        box-shadow: 0 18px 40px rgba(249, 115, 22, 0.7), inset 0 2px 10px rgba(255, 255, 255, 0.5) !important;
-    }
-    
-    .stButton > button:active {
-        transform: perspective(400px) translateZ(-5px) translateY(1px) scale(0.98) !important;
+        transform: translateY(-2px) scale(1.02) !important;
+        box-shadow: 0 15px 35px rgba(245, 158, 11, 0.6) !important;
     }
 
-    /* 7. Glassmorphic Tables with Smooth Fade-In Animation */
+    /* 7. Glassmorphic Tables */
     .custom-table-container {
         overflow-x: auto; 
         max-height: 520px;
-        border: 1px solid rgba(56, 189, 248, 0.3);
-        border-radius: 20px;
-        background: rgba(15, 23, 42, 0.75);
+        border: 1px solid rgba(245, 158, 11, 0.25);
+        border-radius: 18px;
+        background: rgba(20, 18, 16, 0.8);
         backdrop-filter: blur(25px);
-        box-shadow: 0 22px 50px rgba(0, 0, 0, 0.75), inset 0 0 25px rgba(56, 189, 248, 0.08);
+        box-shadow: 0 22px 50px rgba(0, 0, 0, 0.8), inset 0 0 25px rgba(245, 158, 11, 0.04);
         margin-bottom: 25px;
-        transform: perspective(1000px);
-        animation: fadeInTable 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    
-    @keyframes fadeInTable {
-        from { opacity: 0; transform: perspective(1000px) rotateX(6px) translateY(25px); }
-        to { opacity: 1; transform: perspective(1000px) rotateX(0deg) translateY(0); }
     }
 
     .custom-table { 
@@ -188,15 +164,15 @@ st.markdown(
     }
     
     .custom-table th { 
-        background: rgba(30, 41, 59, 0.95); 
-        color: #38bdf8; 
+        background: rgba(35, 30, 26, 0.95); 
+        color: #f59e0b; 
         padding: 15px 18px; 
         text-align: left; 
         position: sticky; 
         top: 0; 
         font-weight: 800; 
         z-index: 2; 
-        border-bottom: 1px solid rgba(56, 189, 248, 0.4);
+        border-bottom: 1px solid rgba(245, 158, 11, 0.3);
         text-transform: uppercase;
         letter-spacing: 0.8px;
         font-size: 11px;
@@ -204,52 +180,43 @@ st.markdown(
     
     .custom-table td { 
         padding: 13px 18px; 
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        color: #e2e8f0; 
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        color: #e5e7eb; 
         font-weight: 500;
-        transition: all 0.25s ease;
-    }
-    
-    .custom-table tr {
-        transition: all 0.25s ease-in-out;
     }
     
     .custom-table tr:hover td { 
-        background-color: rgba(56, 189, 248, 0.18); 
+        background-color: rgba(245, 158, 11, 0.12); 
         color: #ffffff;
-        box-shadow: inset 0 0 15px rgba(56, 189, 248, 0.2);
     }
 
-    /* 8. Modern Glassy Tabs with Smooth Motion */
+    /* 8. Glassy Tabs */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 12px;
-        background-color: rgba(15, 23, 42, 0.65);
+        gap: 10px;
+        background-color: rgba(20, 18, 16, 0.7);
         padding: 8px;
-        border-radius: 18px;
-        border: 1px solid rgba(56, 189, 248, 0.25);
-        box-shadow: inset 0 6px 15px rgba(0,0,0,0.5);
+        border-radius: 16px;
+        border: 1px solid rgba(245, 158, 11, 0.2);
     }
 
     .stTabs [data-baseweb="tab"] {
-        height: 42px;
-        border-radius: 14px;
+        height: 40px;
+        border-radius: 12px;
         font-weight: 700;
-        color: #94a3b8;
+        color: #9ca3af;
         border: none !important;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: all 0.3s ease;
     }
     
     .stTabs [data-baseweb="tab"]:hover {
-        color: #38bdf8;
-        background: rgba(56, 189, 248, 0.12);
-        transform: translateY(-2px);
+        color: #f59e0b;
+        background: rgba(245, 158, 11, 0.1);
     }
 
     .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, #38bdf8, #0284c7) !important;
-        color: #030712 !important;
-        box-shadow: 0 8px 25px rgba(56, 189, 248, 0.55), inset 0 2px 6px rgba(255,255,255,0.5) !important;
-        transform: scale(1.02);
+        background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+        color: #0f0e0d !important;
+        box-shadow: 0 8px 25px rgba(245, 158, 11, 0.45) !important;
     }
     </style>
 """,
@@ -257,7 +224,9 @@ st.markdown(
 )
 
 # ================= CONSTANTS & DIRECTORIES =================
-EXCEL_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+EXCEL_MIME = (
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+)
 DATA_DIR = "saved_data"
 os.makedirs(DATA_DIR, exist_ok=True)
 MIS_PATH = os.path.join(DATA_DIR, "mis.pkl")
@@ -279,7 +248,15 @@ def is_zero_late(v):
     if is_blank(v):
         return True
     s = str(v).strip().lower()
-    if s in ("0", "0.0", "00:00", "0:00", "00:00:00", "0:00:00", "0 days 00:00:00"):
+    if s in (
+        "0",
+        "0.0",
+        "00:00",
+        "0:00",
+        "00:00:00",
+        "0:00:00",
+        "0 days 00:00:00",
+    ):
         return True
     try:
         return pd.to_timedelta(s) <= pd.Timedelta(0)
@@ -322,7 +299,11 @@ def clean_party(v, keep_other=True):
 
 def vendor_column(df):
     return next(
-        (c for c in df.columns if any(k in c.lower() for k in ("vendor", "party", "client", "customer"))),
+        (
+            c
+            for c in df.columns
+            if any(k in c.lower() for k in ("vendor", "party", "client", "customer"))
+        ),
         None,
     )
 
@@ -331,12 +312,19 @@ def render_html_table(df_to_show, max_rows=2000):
     clean_df = df_to_show.fillna("").astype(str)
     note = ""
     if len(clean_df) > max_rows:
-        note = f'<div style="color:#f97316; font-size:12px; margin-bottom:6px; font-weight:700;">⚡ Showing first {max_rows} rows for performance. Download Excel for full data.</div>'
+        note = f'<div style="color:#f59e0b; font-size:12px; margin-bottom:6px; font-weight:700;">⚡ Showing first {max_rows} rows for performance. Download Excel for full data.</div>'
         clean_df = clean_df.head(max_rows)
-    headers = "".join([f"<th>{html_lib.escape(str(col))}</th>" for col in clean_df.columns])
+    headers = "".join(
+        [f"<th>{html_lib.escape(str(col))}</th>" for col in clean_df.columns]
+    )
     rows_html = []
     for _, row in clean_df.iterrows():
-        cells = "".join([f"<td>{html_lib.escape('' if val.lower() in ('nan', 'nat') else val)}</td>" for val in row])
+        cells = "".join(
+            [
+                f"<td>{html_lib.escape('' if val.lower() in ('nan', 'nat') else val)}</td>"
+                for val in row
+            ]
+        )
         rows_html.append(f"<tr>{cells}</tr>")
     body = "".join(rows_html)
     return f'{note}<div class="custom-table-container"><table class="custom-table"><thead><tr>{headers}</tr></thead><tbody>{body}</tbody></table></div>'
@@ -353,16 +341,28 @@ def to_excel_bytes(sheets):
 # ================= NEWS TICKER COMPONENT =================
 def render_news_ticker(df):
     if df.empty:
-        ticker_text = "⚡ GLASSY MOTION COCKPIT READY... WAITING FOR DATA UPLOAD... PLEASE UPLOAD MIS FILE FROM SIDEBAR..."
+        ticker_text = "⚡ DARK GOLD COCKPIT READY... WAITING FOR DATA UPLOAD... PLEASE UPLOAD MIS FILE FROM SIDEBAR..."
     else:
-        late_col = next((c for c in ["Late Hrs", "Delay Hrs", "Delay"] if c in df.columns), None)
-        staff_col = next((c for c in df.columns if "controlling" in c.lower() or "staff" in c.lower()), None)
+        late_col = next(
+            (c for c in ["Late Hrs", "Delay Hrs", "Delay"] if c in df.columns),
+            None,
+        )
+        staff_col = next(
+            (
+                c
+                for c in df.columns
+                if "controlling" in c.lower() or "staff" in c.lower()
+            ),
+            None,
+        )
         client_col = vendor_column(df)
 
         if late_col:
             total = len(df)
             delayed = len(df[~df[late_col].apply(is_zero_late)])
-            on_time_pct = round(((total - delayed) / total) * 100, 1) if total > 0 else 0
+            on_time_pct = (
+                round(((total - delayed) / total) * 100, 1) if total > 0 else 0
+            )
 
             staff_text = ""
             if staff_col:
@@ -376,21 +376,25 @@ def render_news_ticker(df):
                 if not top_client.empty:
                     client_text = f" | 🏢 TOP CLIENT: {top_client.index[0]} ({top_client.iloc[0]} Trips)"
 
-            ticker_text = f"🚀 MOTION HUD STATUS: Total Trips: {total} | ✅ On-Time: {on_time_pct}% | ⚠️ Delayed: {delayed}{staff_text}{client_text}"
+            ticker_text = f"🚀 SYSTEM STATUS: Total Trips: {total} | ✅ On-Time: {on_time_pct}% | ⚠️ Delayed: {delayed}{staff_text}{client_text}"
         else:
-            ticker_text = f"🚀 MOTION HUD: Active Trips: {len(df)} | 🟢 ALL SYSTEMS NORMAL"
+            ticker_text = (
+                f"🚀 SYSTEM HUD: Active Trips: {len(df)} | 🟢 ALL SYSTEMS NORMAL"
+            )
 
     full_text = f"<span class='ticker-item'>{ticker_text}</span>" * 4
 
     html_out = f"""<div class="news-ticker-container">
-<div class="ticker-label">MOTION UI</div>
+<div class="ticker-label">LIVE HUD</div>
 <div class="ticker-text-wrapper">{full_text}</div>
 </div>"""
     st.markdown(html_out, unsafe_allow_html=True)
 
 
 # ================= REPORTED VEHICLE TABLE & REPORTS =================
-def show_reported_vehicle_table(df, unique_key="", staff_filter=None, only_delay=False):
+def show_reported_vehicle_table(
+    df, unique_key="", staff_filter=None, only_delay=False
+):
     final_rep_col = next(
         (
             c
@@ -406,7 +410,13 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None, only_delay
     )
     if not final_rep_col:
         final_rep_col = next(
-            (c for c in df.columns if "report" in c.lower() or "desp" in c.lower() or "date" in c.lower()),
+            (
+                c
+                for c in df.columns
+                if "report" in c.lower()
+                or "desp" in c.lower()
+                or "date" in c.lower()
+            ),
             None,
         )
 
@@ -417,19 +427,26 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None, only_delay
         reported_df = temp_df.copy()
 
     if reported_df.empty:
-        st.warning("Selected data khali hai.")
+        st.warning("Selected data is empty.")
         return
 
-    late_col = next((c for c in ["Late Hrs", "Delay Hrs", "Delay"] if c in reported_df.columns), None)
+    late_col = next(
+        (c for c in ["Late Hrs", "Delay Hrs", "Delay"] if c in reported_df.columns),
+        None,
+    )
 
     if only_delay and late_col:
-        reported_df = reported_df[~reported_df[late_col].apply(is_zero_late)].copy()
+        reported_df = reported_df[
+            ~reported_df[late_col].apply(is_zero_late)
+        ].copy()
         if reported_df.empty:
             st.info("No Delay Closed vehicles found.")
             return
 
     if final_rep_col:
-        parsed_rep_dt = pd.to_datetime(reported_df[final_rep_col], errors="coerce", dayfirst=True)
+        parsed_rep_dt = pd.to_datetime(
+            reported_df[final_rep_col], errors="coerce", dayfirst=True
+        )
         reported_df["_Rep_Date_Obj"] = parsed_rep_dt.dt.date
         reported_df["_Rep_Date_Str"] = parsed_rep_dt.dt.strftime("%d-%m-%Y")
         reported_df["_Month_Str"] = parsed_rep_dt.dt.strftime("%B %Y")
@@ -456,7 +473,9 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None, only_delay
             return "Last 4 Weeks"
         return None
 
-    reported_df["_Rel_Week"] = reported_df["_Rep_Date_Obj"].apply(get_relative_week)
+    reported_df["_Rel_Week"] = reported_df["_Rep_Date_Obj"].apply(
+        get_relative_week
+    )
 
     valid_dates = (
         reported_df[reported_df["_Rep_Date_Obj"].notna()]
@@ -471,33 +490,62 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None, only_delay
     )
     month_options = ["ALL"] + valid_months["_Month_Str"].tolist()
 
-    staff_col = next((c for c in reported_df.columns if "controlling" in c.lower() or "staff" in c.lower()), None)
+    staff_col = next(
+        (
+            c
+            for c in reported_df.columns
+            if "controlling" in c.lower() or "staff" in c.lower()
+        ),
+        None,
+    )
     client_col_name = vendor_column(reported_df) or "VendorName"
 
     if staff_filter:
         selected_staff = staff_filter
         st.info(f"🔒 Staff View Active: **{selected_staff}**")
-        selected_client_report, selected_delay_hours, selected_remarks_filter = "ALL", "ALL", "ALL"
-        selected_month, selected_date, delay_filter, selected_weeks = "ALL", "ALL", "ALL Reported Vehicles", []
+        selected_client_report, selected_delay_hours, selected_remarks_filter = (
+            "ALL",
+            "ALL",
+            "ALL",
+        )
+        selected_month, selected_date, delay_filter, selected_weeks = (
+            "ALL",
+            "ALL",
+            "ALL Reported Vehicles",
+            [],
+        )
     else:
         st.markdown(
-            "<h3 style='color:#38bdf8; font-size:16px; font-weight:700;'>🔍 Motion UI Filters</h3>",
+            "<h3 style='color:#f59e0b; font-size:16px; font-weight:700;'>🔍 Advanced Filters</h3>",
             unsafe_allow_html=True,
         )
         f_col1, f_col2, f_col3, f_col4, f_col5, f_col6, f_col7 = st.columns(7)
         with f_col1:
-            selected_date = st.selectbox("📅 Date", date_options, index=0, key=f"d_{unique_key}")
+            selected_date = st.selectbox(
+                "📅 Date", date_options, index=0, key=f"d_{unique_key}"
+            )
         with f_col2:
-            selected_month = st.selectbox("🗓️ Month", month_options, index=0, key=f"m_{unique_key}")
+            selected_month = st.selectbox(
+                "🗓️ Month", month_options, index=0, key=f"m_{unique_key}"
+            )
         with f_col3:
             delay_filter = st.selectbox(
-                "🚨 Status", ["ALL Reported Vehicles", "Only Delay", "Only On-Time"], index=0, key=f"s_{unique_key}"
+                "🚨 Status",
+                ["ALL Reported Vehicles", "Only Delay", "Only On-Time"],
+                index=0,
+                key=f"s_{unique_key}",
             )
         with f_col4:
             selected_staff = st.selectbox(
                 "👨‍💼 Staff",
                 ["ALL"]
-                + sorted([str(x).strip() for x in reported_df[staff_col].dropna().unique() if str(x).strip() != ""])
+                + sorted(
+                    [
+                        str(x).strip()
+                        for x in reported_df[staff_col].dropna().unique()
+                        if str(x).strip() != ""
+                    ]
+                )
                 if staff_col
                 else ["ALL"],
                 index=0,
@@ -521,19 +569,42 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None, only_delay
             )
         with f_col6:
             selected_delay_hours = st.selectbox(
-                "⏱️ Delay Hrs", ["ALL", "Delay < 10 mins", "Delay < 30 mins", "Delay <= 1 hour"], index=0, key=f"dh_{unique_key}"
+                "⏱️ Delay Hrs",
+                [
+                    "ALL",
+                    "Delay < 10 mins",
+                    "Delay < 30 mins",
+                    "Delay <= 1 hour",
+                ],
+                index=0,
+                key=f"dh_{unique_key}",
             )
         with f_col7:
             selected_remarks_filter = st.selectbox(
-                "📝 Remarks", ["ALL", "With Remarks", "Without Remarks (Empty)", "Delay + Without Remarks"], index=0, key=f"r_{unique_key}"
+                "📝 Remarks",
+                [
+                    "ALL",
+                    "With Remarks",
+                    "Without Remarks (Empty)",
+                    "Delay + Without Remarks",
+                ],
+                index=0,
+                key=f"r_{unique_key}",
             )
 
-        strict_week_options = ["Last 1 Week", "Last 2 Weeks", "Last 3 Weeks", "Last 4 Weeks"]
-        available_weeks = [w for w in strict_week_options if w in reported_df["_Rel_Week"].unique()]
+        strict_week_options = [
+            "Last 1 Week",
+            "Last 2 Weeks",
+            "Last 3 Weeks",
+            "Last 4 Weeks",
+        ]
+        available_weeks = [
+            w for w in strict_week_options if w in reported_df["_Rel_Week"].unique()
+        ]
         selected_weeks = []
         if available_weeks:
             st.markdown(
-                "<div style='font-size: 13px; color: #94a3b8; margin-bottom: 5px; margin-top:10px; font-weight:600;'>Filter by Week:</div>",
+                "<div style='font-size: 13px; color: #9ca3af; margin-bottom: 5px; margin-top:10px; font-weight:600;'>Filter by Week:</div>",
                 unsafe_allow_html=True,
             )
             chk_cols = st.columns(len(strict_week_options))
@@ -543,23 +614,41 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None, only_delay
                         selected_weeks.append(wk)
 
     filtered_report_df = reported_df.copy()
-    remark_col = next((c for c in ["Tracking Remark", "Remark", "Remarks"] if c in filtered_report_df.columns), None)
+    remark_col = next(
+        (
+            c
+            for c in ["Tracking Remark", "Remark", "Remarks"]
+            if c in filtered_report_df.columns
+        ),
+        None,
+    )
 
     if not staff_filter:
         if selected_date != "ALL":
-            filtered_report_df = filtered_report_df[filtered_report_df["_Rep_Date_Str"] == selected_date]
+            filtered_report_df = filtered_report_df[
+                filtered_report_df["_Rep_Date_Str"] == selected_date
+            ]
         if selected_month != "ALL":
-            filtered_report_df = filtered_report_df[filtered_report_df["_Month_Str"] == selected_month]
+            filtered_report_df = filtered_report_df[
+                filtered_report_df["_Month_Str"] == selected_month
+            ]
         if selected_weeks:
-            filtered_report_df = filtered_report_df[filtered_report_df["_Rel_Week"].isin(selected_weeks)]
+            filtered_report_df = filtered_report_df[
+                filtered_report_df["_Rel_Week"].isin(selected_weeks)
+            ]
 
         if late_col and not only_delay:
             if delay_filter == "Only Delay":
-                filtered_report_df = filtered_report_df[~filtered_report_df[late_col].apply(is_zero_late)]
+                filtered_report_df = filtered_report_df[
+                    ~filtered_report_df[late_col].apply(is_zero_late)
+                ]
             elif delay_filter == "Only On-Time":
-                filtered_report_df = filtered_report_df[filtered_report_df[late_col].apply(is_zero_late)]
+                filtered_report_df = filtered_report_df[
+                    filtered_report_df[late_col].apply(is_zero_late)
+                ]
 
             if selected_delay_hours != "ALL":
+
                 def check_delay(val):
                     mins = get_delay_minutes(val)
                     if mins <= 0:
@@ -572,28 +661,51 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None, only_delay
                         return mins <= 60
                     return False
 
-                filtered_report_df = filtered_report_df[filtered_report_df[late_col].apply(check_delay)]
+                filtered_report_df = filtered_report_df[
+                    filtered_report_df[late_col].apply(check_delay)
+                ]
 
         if selected_remarks_filter != "ALL" and remark_col:
             valid_indices = []
             for idx, row in filtered_report_df.iterrows():
                 is_empty = is_blank(row.get(remark_col, None))
-                is_delayed = not is_zero_late(row.get(late_col, 0)) if late_col else True
+                is_delayed = (
+                    not is_zero_late(row.get(late_col, 0)) if late_col else True
+                )
                 if selected_remarks_filter == "With Remarks" and not is_empty:
                     valid_indices.append(idx)
-                elif selected_remarks_filter == "Without Remarks (Empty)" and is_empty:
+                elif (
+                    selected_remarks_filter == "Without Remarks (Empty)"
+                    and is_empty
+                ):
                     valid_indices.append(idx)
-                elif selected_remarks_filter == "Delay + Without Remarks" and is_delayed and is_empty:
+                elif (
+                    selected_remarks_filter == "Delay + Without Remarks"
+                    and is_delayed
+                    and is_empty
+                ):
                     valid_indices.append(idx)
             filtered_report_df = filtered_report_df.loc[valid_indices]
 
         if selected_staff != "ALL" and staff_col:
-            filtered_report_df = filtered_report_df[filtered_report_df[staff_col].astype(str).str.strip() == selected_staff]
-        if selected_client_report != "ALL" and client_col_name in filtered_report_df.columns:
-            filtered_report_df = filtered_report_df[filtered_report_df[client_col_name].astype(str).str.strip() == selected_client_report]
+            filtered_report_df = filtered_report_df[
+                filtered_report_df[staff_col].astype(str).str.strip()
+                == selected_staff
+            ]
+        if (
+            selected_client_report != "ALL"
+            and client_col_name in filtered_report_df.columns
+        ):
+            filtered_report_df = filtered_report_df[
+                filtered_report_df[client_col_name].astype(str).str.strip()
+                == selected_client_report
+            ]
     else:
         if staff_col:
-            filtered_report_df = filtered_report_df[filtered_report_df[staff_col].astype(str).str.strip() == staff_filter]
+            filtered_report_df = filtered_report_df[
+                filtered_report_df[staff_col].astype(str).str.strip()
+                == staff_filter
+            ]
 
     if filtered_report_df.empty:
         st.warning("No data found for the selected filters.")
@@ -628,12 +740,26 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None, only_delay
 
     actual_display_cols = []
     for col in desired_cols:
-        matched_c = next((c for c in filtered_report_df.columns if c.lower().strip() == col.lower().strip()), None)
+        matched_c = next(
+            (
+                c
+                for c in filtered_report_df.columns
+                if c.lower().strip() == col.lower().strip()
+            ),
+            None,
+        )
         if matched_c:
             actual_display_cols.append(matched_c)
         else:
             if col == "Tracking Remark":
-                rem_alt = next((c for c in filtered_report_df.columns if "remark" in c.lower()), None)
+                rem_alt = next(
+                    (
+                        c
+                        for c in filtered_report_df.columns
+                        if "remark" in c.lower()
+                    ),
+                    None,
+                )
                 if rem_alt:
                     actual_display_cols.append(rem_alt)
             elif col == "Party":
@@ -642,14 +768,18 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None, only_delay
                     actual_display_cols.append(party_alt)
 
     if not actual_display_cols:
-        actual_display_cols = [c for c in filtered_report_df.columns if not c.startswith("_")]
+        actual_display_cols = [
+            c for c in filtered_report_df.columns if not c.startswith("_")
+        ]
 
     final_report_df = filtered_report_df[actual_display_cols].copy()
     final_report_df.insert(0, "S.No", range(1, 1 + len(final_report_df)))
 
     st.markdown(render_html_table(final_report_df), unsafe_allow_html=True)
 
-    excel_bytes_reported = to_excel_bytes({"Reported_Vehicles": final_report_df})
+    excel_bytes_reported = to_excel_bytes(
+        {"Reported_Vehicles": final_report_df}
+    )
     st.download_button(
         label="📥 Download Filtered Excel",
         data=excel_bytes_reported,
@@ -662,23 +792,33 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None, only_delay
     if not only_delay:
         # ================= CLIENT-WISE PERFORMANCE SECTION =================
         st.markdown(
-            "<br><h3 style='color:#38bdf8; font-size:18px; font-weight:800; margin-bottom:15px;'>🏢 Client-wise Performance HUD</h3>",
+            "<br><h3 style='color:#f59e0b; font-size:18px; font-weight:800; margin-bottom:15px;'>🏢 Client-wise Performance HUD</h3>",
             unsafe_allow_html=True,
         )
 
         if client_col_name and client_col_name in reported_df.columns and late_col:
             client_base_df = reported_df.copy()
-            client_base_df["Is_OnTime"] = client_base_df[late_col].apply(is_zero_late)
-            client_base_df["Is_Delay"] = ~client_base_df[late_col].apply(is_zero_late)
+            client_base_df["Is_OnTime"] = client_base_df[late_col].apply(
+                is_zero_late
+            )
+            client_base_df["Is_Delay"] = ~client_base_df[late_col].apply(
+                is_zero_late
+            )
 
             client_summary = (
                 client_base_df.groupby(client_col_name)
-                .agg(Total=("Is_OnTime", "count"), OnTime=("Is_OnTime", "sum"), Delay=("Is_Delay", "sum"))
+                .agg(
+                    Total=("Is_OnTime", "count"),
+                    OnTime=("Is_OnTime", "sum"),
+                    Delay=("Is_Delay", "sum"),
+                )
                 .reset_index()
             )
 
             client_summary["On-Time %"] = client_summary.apply(
-                lambda r: f"{round((r['OnTime'] / r['Total']) * 100, 1)}%" if r["Total"] > 0 else "0.0%",
+                lambda r: f"{round((r['OnTime'] / r['Total']) * 100, 1)}%"
+                if r["Total"] > 0
+                else "0.0%",
                 axis=1,
             )
             client_summary = client_summary.rename(
@@ -692,9 +832,13 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None, only_delay
 
             client_summary.insert(0, "S.No", range(1, 1 + len(client_summary)))
 
-            st.markdown(render_html_table(client_summary), unsafe_allow_html=True)
+            st.markdown(
+                render_html_table(client_summary), unsafe_allow_html=True
+            )
 
-            excel_bytes_client = to_excel_bytes({"Client_Performance": client_summary})
+            excel_bytes_client = to_excel_bytes(
+                {"Client_Performance": client_summary}
+            )
             st.download_button(
                 label="📥 Download Client Performance",
                 data=excel_bytes_client,
@@ -710,16 +854,26 @@ def show_reported_vehicle_table(df, unique_key="", staff_filter=None, only_delay
 # ================= IN-TRANSIT VEHICLE VIEW =================
 def show_in_transit_view(mis_df):
     st.markdown(
-        "<h2 style='color:#38bdf8; font-weight:800;'>🚚 In-Transit Active Trips HUD</h2>",
+        "<h2 style='color:#f59e0b; font-weight:800;'>🚚 In-Transit Active Trips HUD</h2>",
         unsafe_allow_html=True,
     )
 
     final_rep_col = next(
-        (c for c in ["Final Touching Reporting Date & Time", "Reporting Date & Time", "Reporting Date"] if c in mis_df.columns),
+        (
+            c
+            for c in [
+                "Final Touching Reporting Date & Time",
+                "Reporting Date & Time",
+                "Reporting Date",
+            ]
+            if c in mis_df.columns
+        ),
         None,
     )
     if not final_rep_col:
-        final_rep_col = next((c for c in mis_df.columns if "report" in c.lower()), None)
+        final_rep_col = next(
+            (c for c in mis_df.columns if "report" in c.lower()), None
+        )
 
     if not final_rep_col:
         st.warning("MIS data reporting date column missing.")
@@ -733,7 +887,14 @@ def show_in_transit_view(mis_df):
 
     st.metric("TOTAL IN-TRANSIT VEHICLES", len(in_transit_df))
 
-    staff_col = next((c for c in in_transit_df.columns if "controlling" in c.lower() or "staff" in c.lower()), None)
+    staff_col = next(
+        (
+            c
+            for c in in_transit_df.columns
+            if "controlling" in c.lower() or "staff" in c.lower()
+        ),
+        None,
+    )
     client_col_name = vendor_column(in_transit_df) or "VendorName"
 
     col1, col2 = st.columns(2)
@@ -741,7 +902,13 @@ def show_in_transit_view(mis_df):
         selected_staff_it = st.selectbox(
             "Filter by Staff",
             ["ALL"]
-            + sorted([str(x).strip() for x in in_transit_df[staff_col].dropna().unique() if str(x).strip() != ""])
+            + sorted(
+                [
+                    str(x).strip()
+                    for x in in_transit_df[staff_col].dropna().unique()
+                    if str(x).strip() != ""
+                ]
+            )
             if staff_col
             else ["ALL"],
             key="it_staff",
@@ -751,7 +918,11 @@ def show_in_transit_view(mis_df):
             "Filter by Client",
             ["ALL"]
             + sorted(
-                [str(x).strip() for x in in_transit_df[client_col_name].dropna().unique() if str(x).strip() != ""]
+                [
+                    str(x).strip()
+                    for x in in_transit_df[client_col_name].dropna().unique()
+                    if str(x).strip() != ""
+                ]
             )
             if client_col_name in in_transit_df.columns
             else ["ALL"],
@@ -760,9 +931,18 @@ def show_in_transit_view(mis_df):
 
     filtered_it_df = in_transit_df.copy()
     if selected_staff_it != "ALL" and staff_col:
-        filtered_it_df = filtered_it_df[filtered_it_df[staff_col].astype(str).str.strip() == selected_staff_it]
-    if selected_client_it != "ALL" and client_col_name in filtered_it_df.columns:
-        filtered_it_df = filtered_it_df[filtered_it_df[client_col_name].astype(str).str.strip() == selected_client_it]
+        filtered_it_df = filtered_it_df[
+            filtered_it_df[staff_col].astype(str).str.strip()
+            == selected_staff_it
+        ]
+    if (
+        selected_client_it != "ALL"
+        and client_col_name in filtered_it_df.columns
+    ):
+        filtered_it_df = filtered_it_df[
+            filtered_it_df[client_col_name].astype(str).str.strip()
+            == selected_client_it
+        ]
 
     desired_cols = [
         "Lorry No.",
@@ -782,12 +962,21 @@ def show_in_transit_view(mis_df):
 
     actual_display_cols = []
     for col in desired_cols:
-        matched_c = next((c for c in filtered_it_df.columns if c.lower().strip() == col.lower().strip()), None)
+        matched_c = next(
+            (
+                c
+                for c in filtered_it_df.columns
+                if c.lower().strip() == col.lower().strip()
+            ),
+            None,
+        )
         if matched_c:
             actual_display_cols.append(matched_c)
 
     if not actual_display_cols:
-        actual_display_cols = [c for c in filtered_it_df.columns if not c.startswith("_")]
+        actual_display_cols = [
+            c for c in filtered_it_df.columns if not c.startswith("_")
+        ]
 
     final_it_df = filtered_it_df[actual_display_cols].copy()
     final_it_df.insert(0, "S.No", range(1, 1 + len(final_it_df)))
@@ -816,7 +1005,9 @@ def process_uploaded_files(uploaded_files):
                 for enc in ["utf-8", "latin-1", "cp1252"]:
                     try:
                         uploaded_file.seek(0)
-                        temp_df = pd.read_csv(uploaded_file, low_memory=False, encoding=enc)
+                        temp_df = pd.read_csv(
+                            uploaded_file, low_memory=False, encoding=enc
+                        )
                         break
                     except Exception:
                         continue
@@ -828,13 +1019,19 @@ def process_uploaded_files(uploaded_files):
             temp_df.columns = temp_df.columns.astype(str).str.strip()
 
             vendor_c = vendor_column(temp_df)
-            temp_df["VendorName"] = temp_df[vendor_c].apply(lambda x: clean_party(x, True)) if vendor_c else "Other"
+            temp_df["VendorName"] = (
+                temp_df[vendor_c].apply(lambda x: clean_party(x, True))
+                if vendor_c
+                else "Other"
+            )
             mis_dfs.append(temp_df)
 
         except Exception as e:
             st.error(f"Error processing {uploaded_file.name}: {e}")
 
-    return pd.concat(mis_dfs, ignore_index=True) if mis_dfs else pd.DataFrame()
+    return (
+        pd.concat(mis_dfs, ignore_index=True) if mis_dfs else pd.DataFrame()
+    )
 
 
 # ================= MAIN APP =================
@@ -848,66 +1045,102 @@ def main():
     with header_col2:
         st.markdown(
             """
-            <div style="background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(20px); border: 1px solid rgba(56, 189, 248, 0.3); padding: 8px 16px; border-radius: 16px; 
-                        text-align: right; box-shadow: 0 12px 30px rgba(56, 189, 248, 0.15); display: flex; align-items: center; justify-content: flex-end; gap: 12px;">
+            <div style="background: rgba(30, 26, 22, 0.75); backdrop-filter: blur(20px); border: 1px solid rgba(245, 158, 11, 0.3); padding: 8px 16px; border-radius: 16px; 
+                        text-align: right; box-shadow: 0 12px 30px rgba(245, 158, 11, 0.1); display: flex; align-items: center; justify-content: flex-end; gap: 12px;">
                 <div style="text-align: right;">
-                    <div style="color: #38bdf8; font-weight: 800; font-size: 13px;">TEJAS CARGO INDIA LTD.</div>
-                    <div style="color: #94a3b8; font-size: 11px; font-weight: 600;">GLASSY MOTION UI</div>
+                    <div style="color: #f59e0b; font-weight: 800; font-size: 13px;">TEJAS CARGO INDIA LTD.</div>
+                    <div style="color: #9ca3af; font-size: 11px; font-weight: 600;">DARK GOLD UI</div>
                 </div>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
-    st.markdown("<hr style='border:0; height:1px; background:rgba(56, 189, 248, 0.25); margin: 15px 0 20px 0;'>", unsafe_allow_html=True)
+    st.markdown(
+        "<hr style='border:0; height:1px; background:rgba(245, 158, 11, 0.25); margin: 15px 0 20px 0;'>",
+        unsafe_allow_html=True,
+    )
 
-    # Sidebar File Upload & Management
+    # ================= SIDEBAR & DATA MANAGEMENT =================
     with st.sidebar:
-        st.markdown("<h2 style='color:#38bdf8; font-size: 18px; font-weight:800;'>⚙️ Motion Control Panel</h2>", unsafe_allow_html=True)
-        uploaded_files = st.file_uploader("Upload MIS Files", type=["xlsx", "xls", "csv"], accept_multiple_files=True)
+        st.markdown(
+            "<h2 style='color:#f59e0b; font-size: 18px; font-weight:800;'>📁 Data Management</h2>",
+            unsafe_allow_html=True,
+        )
+
+        uploaded_files = st.file_uploader(
+            "Upload MIS Excel/CSV Files",
+            type=["xlsx", "xls", "csv"],
+            accept_multiple_files=True,
+        )
 
         if uploaded_files:
-            mis_df = process_uploaded_files(uploaded_files)
-            if not mis_df.empty:
-                with open(MIS_PATH, "wb") as f:
-                    pickle.dump(mis_df, f)
-            st.success("Files Loaded Successfully!")
+            if st.button("🚀 Process & Load Data", use_container_width=True):
+                with st.spinner("Processing files..."):
+                    processed_df = process_uploaded_files(uploaded_files)
+                    if not processed_df.empty:
+                        st.session_state["mis_df"] = processed_df
+                        with open(MIS_PATH, "wb") as f:
+                            pickle.dump(processed_df, f)
+                        st.success("Data loaded & persisted successfully!")
+                        st.rerun()
+                    else:
+                        st.error("No valid data could be processed.")
 
-        if st.button("Clear Cache"):
+        # Persistent storage auto-load
+        if "mis_df" not in st.session_state:
             if os.path.exists(MIS_PATH):
-                os.remove(MIS_PATH)
-            st.rerun()
+                try:
+                    with open(MIS_PATH, "rb") as f:
+                        st.session_state["mis_df"] = pickle.load(f)
+                except Exception:
+                    st.session_state["mis_df"] = pd.DataFrame()
+            else:
+                st.session_state["mis_df"] = pd.DataFrame()
 
-    # Load Data from Persistence
-    mis_df = pd.DataFrame()
+        # Data Clear Option
+        if not st.session_state["mis_df"].empty:
+            st.markdown("---")
+            if st.button(
+                "🗑️ Clear Saved Data",
+                use_container_width=True,
+                type="secondary",
+            ):
+                st.session_state["mis_df"] = pd.DataFrame()
+                if os.path.exists(MIS_PATH):
+                    os.remove(MIS_PATH)
+                st.success("Cache and local storage cleared!")
+                st.rerun()
 
-    if os.path.exists(MIS_PATH):
-        with open(MIS_PATH, "rb") as f:
-            mis_df = pickle.load(f)
+    mis_df = st.session_state.get("mis_df", pd.DataFrame())
 
-    # Render Ticker
+    # Render HUD News Ticker
     render_news_ticker(mis_df)
 
-    # Main Tabs with Glassmorphic Motion
-    tab1, tab2, tab3 = st.tabs(["📊 Closed Trips", "🚚 In-Transit Trips", "⚠️ Delay Closed Vehicle"])
+    # Main Tab Layout
+    if mis_df.empty:
+        st.info("👈 Please upload an MIS dataset from the sidebar to begin.")
+    else:
+        tab1, tab2, tab3 = st.tabs(
+            [
+                "📋 Reported Trips Performance",
+                "🚚 In-Transit Active Trips",
+                "🚨 Delay Trips Only",
+            ]
+        )
 
-    with tab1:
-        if not mis_df.empty:
-            show_reported_vehicle_table(mis_df, unique_key="main_mis", only_delay=False)
-        else:
-            st.info("Upload MIS data from sidebar to view Closed Trips.")
+        with tab1:
+            show_reported_vehicle_table(
+                mis_df, unique_key="all_reported", only_delay=False
+            )
 
-    with tab2:
-        if not mis_df.empty:
+        with tab2:
             show_in_transit_view(mis_df)
-        else:
-            st.info("Upload MIS data from sidebar to view In-Transit status.")
 
-    with tab3:
-        if not mis_df.empty:
-            show_reported_vehicle_table(mis_df, unique_key="delay_mis", only_delay=True)
-        else:
-            st.info("Upload MIS data from sidebar to view Delay Closed Vehicle data.")
+        with tab3:
+            show_reported_vehicle_table(
+                mis_df, unique_key="only_delay", only_delay=True
+            )
 
 
 if __name__ == "__main__":
