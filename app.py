@@ -9,56 +9,56 @@ import streamlit as st
 
 # 1. Page Configuration
 st.set_page_config(
-    page_title="Tejas Fleet Dashboard - 3D Cinematic Glass",
+    page_title="Tejas Fleet Dashboard - Neon Analytics UI",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# ================= CUSTOM CSS FOR 3D CINEMATIC GLASSMORPHIC UI =================
+# ================= CUSTOM CSS FOR NEON CYBERPUNK ANALYTICS UI =================
 st.markdown(
     """
     <style>
-    /* 1. Cinematic Soft Gradient Blurred Background */
+    /* 1. Deep Cosmic Cyberpunk Background */
     .main, [data-testid="stAppViewContainer"] {
-        background: radial-gradient(circle at 50% 0%, #e2e8f0 0%, #cbd5e1 50%, #94a3b8 100%) !important;
-        color: #1e293b !important;
+        background: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #0f172a 50%, #020617 100%) !important;
+        color: #f8fafc !important;
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
     }
 
-    /* 2. Sleek 3D Frosted Glass Sidebar */
+    /* 2. Sleek Neon Frosted Glass Sidebar */
     [data-testid="stSidebar"] {
-        background: rgba(255, 255, 255, 0.65) !important;
-        backdrop-filter: blur(30px) !important;
-        border-right: 1px solid rgba(255, 255, 255, 0.8);
-        box-shadow: 20px 0 40px rgba(0, 0, 0, 0.08);
+        background: rgba(15, 23, 42, 0.8) !important;
+        backdrop-filter: blur(25px) !important;
+        border-right: 1px solid rgba(99, 102, 241, 0.25);
+        box-shadow: 20px 0 50px rgba(0, 0, 0, 0.7);
     }
 
-    /* 3. Cinematic 3D Glowing Title */
+    /* 3. Glowing Neon Purple/Blue Typography Title */
     .premium-title {
         font-size: 2.5rem;
         font-weight: 900;
-        background: linear-gradient(135deg, #0f172a 20%, #3b82f6 60%, #8b5cf6 100%);
+        background: linear-gradient(135deg, #ffffff 20%, #818cf8 60%, #c084fc 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         letter-spacing: -1px;
         margin-bottom: 0px;
         margin-top: 0px;
-        text-shadow: 0 10px 25px rgba(59, 130, 246, 0.2);
+        text-shadow: 0 15px 35px rgba(129, 140, 248, 0.3);
     }
 
-    /* 4. Motion HUD News Ticker (Clay Glass Card) */
+    /* 4. Neon Analytics News Ticker */
     .news-ticker-container {
         width: 100%;
-        background: rgba(255, 255, 255, 0.75);
-        border: 1px solid rgba(255, 255, 255, 0.9);
-        backdrop-filter: blur(25px);
-        color: #1e293b;
+        background: rgba(30, 41, 59, 0.75);
+        border: 1px solid rgba(129, 140, 248, 0.35);
+        backdrop-filter: blur(20px);
+        color: #f8fafc;
         overflow: hidden;
         white-space: nowrap;
         box-sizing: border-box;
-        border-radius: 20px;
+        border-radius: 16px;
         margin-bottom: 25px;
-        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.07), inset 0 1px 3px rgba(255, 255, 255, 0.9);
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(99, 102, 241, 0.1);
         position: relative;
         display: flex;
         align-items: center;
@@ -66,7 +66,7 @@ st.markdown(
     }
     
     .ticker-label {
-        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
         color: #ffffff;
         font-weight: 900;
         padding: 0 20px;
@@ -76,11 +76,11 @@ st.markdown(
         position: absolute;
         left: 0;
         z-index: 10;
-        border-radius: 20px 0 0 20px;
+        border-radius: 16px 0 0 16px;
         text-transform: uppercase;
         letter-spacing: 1.2px;
         font-size: 11px;
-        box-shadow: 6px 0 15px rgba(37, 99, 235, 0.3);
+        box-shadow: 6px 0 20px rgba(99, 102, 241, 0.4);
     }
     
     .ticker-text-wrapper {
@@ -94,8 +94,8 @@ st.markdown(
         display: inline-block;
         padding: 0 40px;
         font-size: 13.5px;
-        font-weight: 700;
-        color: #475569;
+        font-weight: 600;
+        color: #cbd5e1;
     }
     
     @keyframes marquee {
@@ -103,56 +103,56 @@ st.markdown(
         100% { transform: translateX(-50%); }
     }
 
-    /* 5. 3D Glass Selectboxes */
+    /* 5. Neon Glass Selectboxes */
     [data-testid="stSelectbox"] label {
-        color: #2563eb !important;
-        font-weight: 800 !important;
+        color: #a5b4fc !important;
+        font-weight: 700 !important;
         font-size: 11px !important;
         text-transform: uppercase;
         letter-spacing: 0.8px;
     }
 
     .stSelectbox div[data-baseweb="select"] > div {
-        background: rgba(255, 255, 255, 0.8) !important;
-        backdrop-filter: blur(20px) !important;
-        border: 1px solid rgba(255, 255, 255, 0.9) !important;
-        border-radius: 16px !important;
-        color: #0f172a !important;
-        font-weight: 600;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05), inset 0 1px 2px rgba(255, 255, 255, 0.8);
+        background: rgba(30, 41, 59, 0.8) !important;
+        backdrop-filter: blur(15px) !important;
+        border: 1px solid rgba(129, 140, 248, 0.3) !important;
+        border-radius: 14px !important;
+        color: #ffffff !important;
+        font-weight: 500;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
         transition: all 0.3s ease !important;
     }
     
     .stSelectbox div[data-baseweb="select"] > div:hover {
-        border-color: #3b82f6 !important;
-        box-shadow: 0 15px 30px rgba(59, 130, 246, 0.2);
+        border-color: #818cf8 !important;
+        box-shadow: 0 15px 30px rgba(129, 140, 248, 0.25);
     }
 
-    /* 6. Cinematic 3D Buttons */
+    /* 6. Neon Glowing Buttons */
     .stButton > button {
-        background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
+        background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
         border: none !important;
         color: white !important;
-        border-radius: 16px !important;
-        font-weight: 800 !important;
-        box-shadow: 0 10px 25px rgba(59, 130, 246, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.4) !important;
+        border-radius: 14px !important;
+        font-weight: 700 !important;
+        box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4) !important;
         transition: all 0.3s ease !important;
     }
     
     .stButton > button:hover {
         transform: translateY(-2px) scale(1.02) !important;
-        box-shadow: 0 15px 35px rgba(59, 130, 246, 0.6), inset 0 2px 6px rgba(255, 255, 255, 0.6) !important;
+        box-shadow: 0 15px 35px rgba(99, 102, 241, 0.7) !important;
     }
 
-    /* 7. Frosted Glass Tables with 3D Depth */
+    /* 7. Glassmorphic Analytics Tables */
     .custom-table-container {
         overflow-x: auto; 
         max-height: 520px;
-        border: 1px solid rgba(255, 255, 255, 0.8);
-        border-radius: 22px;
-        background: rgba(255, 255, 255, 0.7);
-        backdrop-filter: blur(30px);
-        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.08), inset 0 1px 3px rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(129, 140, 248, 0.25);
+        border-radius: 18px;
+        background: rgba(15, 23, 42, 0.75);
+        backdrop-filter: blur(25px);
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.8), inset 0 0 25px rgba(99, 102, 241, 0.05);
         margin-bottom: 25px;
     }
 
@@ -164,61 +164,59 @@ st.markdown(
     }
     
     .custom-table th { 
-        background: rgba(241, 245, 249, 0.9); 
-        color: #1e293b; 
-        padding: 16px 20px; 
+        background: rgba(30, 41, 59, 0.95); 
+        color: #818cf8; 
+        padding: 15px 18px; 
         text-align: left; 
         position: sticky; 
         top: 0; 
         font-weight: 800; 
         z-index: 2; 
-        border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+        border-bottom: 1px solid rgba(129, 140, 248, 0.3);
         text-transform: uppercase;
         letter-spacing: 0.8px;
         font-size: 11px;
     }
     
     .custom-table td { 
-        padding: 14px 20px; 
-        border-bottom: 1px solid rgba(226, 232, 240, 0.5);
-        color: #334155; 
-        font-weight: 600;
+        padding: 13px 18px; 
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        color: #e2e8f0; 
+        font-weight: 500;
     }
     
     .custom-table tr:hover td { 
-        background-color: rgba(59, 130, 246, 0.08); 
-        color: #0f172a;
+        background-color: rgba(129, 140, 248, 0.15); 
+        color: #ffffff;
     }
 
-    /* 8. Glassy 3D Tabs */
+    /* 8. Neon Glow Tabs */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 12px;
-        background-color: rgba(255, 255, 255, 0.5);
+        gap: 10px;
+        background-color: rgba(15, 23, 42, 0.65);
         padding: 8px;
-        border-radius: 18px;
-        border: 1px solid rgba(255, 255, 255, 0.8);
-        box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.03);
+        border-radius: 16px;
+        border: 1px solid rgba(129, 140, 248, 0.2);
     }
 
     .stTabs [data-baseweb="tab"] {
-        height: 42px;
-        border-radius: 14px;
-        font-weight: 800;
-        color: #64748b;
+        height: 40px;
+        border-radius: 12px;
+        font-weight: 700;
+        color: #94a3b8;
         border: none !important;
         transition: all 0.3s ease;
     }
     
     .stTabs [data-baseweb="tab"]:hover {
-        color: #2563eb;
-        background: rgba(255, 255, 255, 0.8);
-        transform: translateY(-1px);
+        color: #818cf8;
+        background: rgba(129, 140, 248, 0.1);
     }
 
     .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
+        background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
         color: #ffffff !important;
-        box-shadow: 0 10px 25px rgba(59, 130, 246, 0.45), inset 0 2px 4px rgba(255, 255, 255, 0.5) !important;
+        box-shadow: 0 8px 25px rgba(99, 102, 241, 0.5) !important;
     }
     </style>
 """,
@@ -314,7 +312,7 @@ def render_html_table(df_to_show, max_rows=2000):
     clean_df = df_to_show.fillna("").astype(str)
     note = ""
     if len(clean_df) > max_rows:
-        note = f'<div style="color:#2563eb; font-size:12px; margin-bottom:6px; font-weight:700;">⚡ Showing first {max_rows} rows for performance. Download Excel for full data.</div>'
+        note = f'<div style="color:#818cf8; font-size:12px; margin-bottom:6px; font-weight:700;">⚡ Showing first {max_rows} rows for performance. Download Excel for full data.</div>'
         clean_df = clean_df.head(max_rows)
     headers = "".join(
         [f"<th>{html_lib.escape(str(col))}</th>" for col in clean_df.columns]
@@ -343,7 +341,7 @@ def to_excel_bytes(sheets):
 # ================= NEWS TICKER COMPONENT =================
 def render_news_ticker(df):
     if df.empty:
-        ticker_text = "⚡ 3D GLASS COCKPIT READY... WAITING FOR DATA UPLOAD... PLEASE UPLOAD MIS FILE FROM SIDEBAR..."
+        ticker_text = "⚡ NEON ANALYTICS COCKPIT READY... WAITING FOR DATA UPLOAD... PLEASE UPLOAD MIS FILE FROM SIDEBAR..."
     else:
         late_col = next(
             (c for c in ["Late Hrs", "Delay Hrs", "Delay"] if c in df.columns),
@@ -378,16 +376,16 @@ def render_news_ticker(df):
                 if not top_client.empty:
                     client_text = f" | 🏢 TOP CLIENT: {top_client.index[0]} ({top_client.iloc[0]} Trips)"
 
-            ticker_text = f"🚀 SYSTEM HUD: Total Trips: {total} | ✅ On-Time: {on_time_pct}% | ⚠️ Delayed: {delayed}{staff_text}{client_text}"
+            ticker_text = f"🚀 ANALYTICS HUD: Total Trips: {total} | ✅ On-Time: {on_time_pct}% | ⚠️ Delayed: {delayed}{staff_text}{client_text}"
         else:
             ticker_text = (
-                f"🚀 SYSTEM HUD: Active Trips: {len(df)} | 🟢 ALL SYSTEMS NORMAL"
+                f"🚀 ANALYTICS HUD: Active Trips: {len(df)} | 🟢 ALL SYSTEMS NORMAL"
             )
 
     full_text = f"<span class='ticker-item'>{ticker_text}</span>" * 4
 
     html_out = f"""<div class="news-ticker-container">
-<div class="ticker-label">LIVE HUD</div>
+<div class="ticker-label">TRACKIFY</div>
 <div class="ticker-text-wrapper">{full_text}</div>
 </div>"""
     st.markdown(html_out, unsafe_allow_html=True)
@@ -518,7 +516,7 @@ def show_reported_vehicle_table(
         )
     else:
         st.markdown(
-            "<h3 style='color:#2563eb; font-size:15px; font-weight:800;'>🔍 Advanced Filters</h3>",
+            "<h3 style='color:#818cf8; font-size:16px; font-weight:700;'>🔍 Analytics Filters</h3>",
             unsafe_allow_html=True,
         )
         f_col1, f_col2, f_col3, f_col4, f_col5, f_col6, f_col7 = st.columns(7)
@@ -606,7 +604,7 @@ def show_reported_vehicle_table(
         selected_weeks = []
         if available_weeks:
             st.markdown(
-                "<div style='font-size: 13px; color: #64748b; margin-bottom: 5px; margin-top:10px; font-weight:700;'>Filter by Week:</div>",
+                "<div style='font-size: 13px; color: #94a3b8; margin-bottom: 5px; margin-top:10px; font-weight:600;'>Filter by Week:</div>",
                 unsafe_allow_html=True,
             )
             chk_cols = st.columns(len(strict_week_options))
@@ -794,7 +792,7 @@ def show_reported_vehicle_table(
     if not only_delay:
         # ================= CLIENT-WISE PERFORMANCE SECTION =================
         st.markdown(
-            "<br><h3 style='color:#2563eb; font-size:18px; font-weight:800; margin-bottom:15px;'>🏢 Client-wise Performance HUD</h3>",
+            "<br><h3 style='color:#818cf8; font-size:18px; font-weight:800; margin-bottom:15px;'>🏢 Client-wise Performance HUD</h3>",
             unsafe_allow_html=True,
         )
 
@@ -856,7 +854,7 @@ def show_reported_vehicle_table(
 # ================= IN-TRANSIT VEHICLE VIEW =================
 def show_in_transit_view(mis_df):
     st.markdown(
-        "<h2 style='color:#2563eb; font-weight:800;'>🚚 In-Transit Active Trips HUD</h2>",
+        "<h2 style='color:#818cf8; font-weight:800;'>🚚 In-Transit Active Trips HUD</h2>",
         unsafe_allow_html=True,
     )
 
@@ -1047,11 +1045,11 @@ def main():
     with header_col2:
         st.markdown(
             """
-            <div style="background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.9); padding: 8px 16px; border-radius: 16px; 
-                        text-align: right; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05); display: flex; align-items: center; justify-content: flex-end; gap: 12px;">
+            <div style="background: rgba(30, 41, 59, 0.75); backdrop-filter: blur(20px); border: 1px solid rgba(129, 140, 248, 0.3); padding: 8px 16px; border-radius: 16px; 
+                        text-align: right; box-shadow: 0 12px 30px rgba(129, 140, 248, 0.15); display: flex; align-items: center; justify-content: flex-end; gap: 12px;">
                 <div style="text-align: right;">
-                    <div style="color: #2563eb; font-weight: 800; font-size: 13px;">TEJAS CARGO INDIA LTD.</div>
-                    <div style="color: #64748b; font-size: 11px; font-weight: 700;">3D CINEMATIC GLASS UI</div>
+                    <div style="color: #818cf8; font-weight: 800; font-size: 13px;">TEJAS CARGO INDIA LTD.</div>
+                    <div style="color: #94a3b8; font-size: 11px; font-weight: 600;">TRACKIFY NEON UI</div>
                 </div>
             </div>
             """,
@@ -1059,14 +1057,14 @@ def main():
         )
 
     st.markdown(
-        "<hr style='border:0; height:1px; background:rgba(226, 232, 240, 0.8); margin: 15px 0 20px 0;'>",
+        "<hr style='border:0; height:1px; background:rgba(129, 140, 248, 0.25); margin: 15px 0 20px 0;'>",
         unsafe_allow_html=True,
     )
 
     # ================= SIDEBAR & DATA MANAGEMENT =================
     with st.sidebar:
         st.markdown(
-            "<h2 style='color:#2563eb; font-size: 18px; font-weight:800;'>📁 Data Management</h2>",
+            "<h2 style='color:#818cf8; font-size: 18px; font-weight:800;'>📁 Data Management</h2>",
             unsafe_allow_html=True,
         )
 
