@@ -47,7 +47,7 @@ html_code = """<!DOCTYPE html>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700;800&display=swap" rel="stylesheet">
 
   <script>
     tailwind.config = {
@@ -57,18 +57,6 @@ html_code = """<!DOCTYPE html>
           fontFamily: {
             sans: ['"Plus Jakarta Sans"', 'sans-serif'],
             mono: ['"JetBrains Mono"', 'monospace'],
-          },
-          colors: {
-            sage: {
-              900: '#0F1110',
-              800: '#161917',
-              700: '#1E2220',
-              600: '#252A27',
-              500: '#2C312E',
-              400: '#8F9A94',
-              300: '#D2DDB2', 
-              200: '#E6EBE1',
-            }
           }
         }
       }
@@ -76,13 +64,31 @@ html_code = """<!DOCTYPE html>
   </script>
 
   <style>
+    :root {
+      --bg-main: #0F1110;
+      --bg-panel: #161917;
+      --bg-header: #1B1E1C;
+      --bg-hover: #1E2220;
+      --border-color: #252A27;
+      --border-sub: #202422;
+      --accent: #D2DDB2;
+      --accent-text: #1A2015;
+      --text-main: #F1F5F2;
+      --text-muted: #8F9A94;
+      --num-total: #F1F5F2;
+      --num-closed: #D2DDB2;
+      --num-transit: #F4C5A9;
+      --num-delay: #E5C3C3;
+    }
+
     body {
-      background: #0F1110;
-      color: #E6EBE1;
+      background: var(--bg-main);
+      color: var(--text-main);
       font-family: 'Plus Jakarta Sans', sans-serif;
       min-height: 100vh;
       overflow-x: hidden;
       -webkit-font-smoothing: antialiased;
+      transition: background 0.35s ease, color 0.35s ease;
     }
 
     ::-webkit-scrollbar {
@@ -90,52 +96,56 @@ html_code = """<!DOCTYPE html>
       height: 5px;
     }
     ::-webkit-scrollbar-track {
-      background: rgba(22, 25, 23, 0.6);
+      background: var(--bg-panel);
     }
     ::-webkit-scrollbar-thumb {
-      background: rgba(210, 221, 178, 0.3);
+      background: var(--border-color);
       border-radius: 9999px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: rgba(210, 221, 178, 0.6);
     }
 
     .glass-panel {
-      background: #161917;
-      border: 1px solid #252A27;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      transition: background 0.35s ease, border-color 0.35s ease;
     }
 
-    /* Updated Sidebar Highlight */
     .sidebar-active {
-      background: #D2DDB2;
-      color: #1A2015;
-      box-shadow: 0 4px 15px rgba(210, 221, 178, 0.1);
+      background: var(--accent);
+      color: var(--accent-text);
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
     }
 
-    /* Structured Crisp Table Borders */
+    .accent-btn {
+      background: var(--accent);
+      color: var(--accent-text);
+    }
+    .accent-btn:hover {
+      filter: brightness(0.92);
+    }
+
     .grid-table {
-      border: 1px solid #252A27;
+      border: 1px solid var(--border-color);
       border-collapse: separate;
       border-spacing: 0;
       border-radius: 1rem;
       overflow: hidden;
     }
     .grid-table th {
-      border-bottom: 1px solid #252A27;
-      border-right: 1px solid #252A27;
-      background: #1B1E1C;
-      color: #8F9A94;
-      font-weight: 800;
-      font-size: 0.65rem;
+      border-bottom: 2px solid var(--border-color);
+      border-right: 1px solid var(--border-color);
+      background: var(--bg-header);
+      color: var(--text-main);
+      font-weight: 900;
+      font-size: 0.68rem;
       letter-spacing: 0.05em;
     }
     .grid-table th:last-child {
       border-right: none;
     }
     .grid-table td {
-      border-bottom: 1px solid #202422;
-      border-right: 1px solid #202422;
-      color: #E6EBE1;
+      border-bottom: 1px solid var(--border-sub);
+      border-right: 1px solid var(--border-sub);
+      color: var(--text-main);
     }
     .grid-table td:last-child {
       border-right: none;
@@ -143,20 +153,162 @@ html_code = """<!DOCTYPE html>
     .grid-table tr:last-child td {
       border-bottom: none;
     }
+    .grid-table tbody tr:hover {
+      background: var(--bg-hover);
+    }
   </style>
 </head>
-<body class="selection:bg-sage-300 selection:text-black">
+<body>
   <div id="root"></div>
 
   <script type="text/babel">
     const { useState, useMemo, useEffect } = React;
-    const { motion, AnimatePresence } = window.Motion;
+    const { motion, AnimatePresence } = window.Motion || {
+      motion: {
+        div: (props) => <div {...props}>{props.children}</div>,
+        button: (props) => <button {...props}>{props.children}</button>,
+      },
+      AnimatePresence: ({ children }) => <>{children}</>
+    };
+
+    // 5 Built-in Color Themes
+    const THEMES = {
+      sage: {
+        name: 'Sage Mint',
+        dot: '#D2DDB2',
+        vars: {
+          '--bg-main': '#0F1110',
+          '--bg-panel': '#161917',
+          '--bg-header': '#1B1E1C',
+          '--bg-hover': '#1E2220',
+          '--border-color': '#252A27',
+          '--border-sub': '#202422',
+          '--accent': '#D2DDB2',
+          '--accent-text': '#1A2015',
+          '--text-main': '#F1F5F2',
+          '--text-muted': '#8F9A94',
+          '--num-total': '#FFFFFF',
+          '--num-closed': '#D2DDB2',
+          '--num-transit': '#F4C5A9',
+          '--num-delay': '#E5C3C3',
+        }
+      },
+      wine: {
+        name: 'Wine Burgundy',
+        dot: '#E12D61',
+        vars: {
+          '--bg-main': '#0D0105',
+          '--bg-panel': '#19030A',
+          '--bg-header': '#24040E',
+          '--bg-hover': '#2A0510',
+          '--border-color': '#42091B',
+          '--border-sub': '#2E0613',
+          '--accent': '#E12D61',
+          '--accent-text': '#FFFFFF',
+          '--text-main': '#FCE7EF',
+          '--text-muted': '#C88EA1',
+          '--num-total': '#FFFFFF',
+          '--num-closed': '#34D399',
+          '--num-transit': '#60A5FA',
+          '--num-delay': '#FB7185',
+        }
+      },
+      cyber: {
+        name: 'Cyber Ocean',
+        dot: '#38BDF8',
+        vars: {
+          '--bg-main': '#070B14',
+          '--bg-panel': '#0F172A',
+          '--bg-header': '#1E293B',
+          '--bg-hover': '#17253B',
+          '--border-color': '#26354D',
+          '--border-sub': '#1E293B',
+          '--accent': '#38BDF8',
+          '--accent-text': '#082F49',
+          '--text-main': '#F1F5F9',
+          '--text-muted': '#94A3B8',
+          '--num-total': '#FFFFFF',
+          '--num-closed': '#4ADE80',
+          '--num-transit': '#38BDF8',
+          '--num-delay': '#F87171',
+        }
+      },
+      emerald: {
+        name: 'Emerald Matrix',
+        dot: '#10B981',
+        vars: {
+          '--bg-main': '#040D0A',
+          '--bg-panel': '#081C15',
+          '--bg-header': '#0D281E',
+          '--bg-hover': '#113327',
+          '--border-color': '#1B4332',
+          '--border-sub': '#123024',
+          '--accent': '#10B981',
+          '--accent-text': '#022C22',
+          '--text-main': '#ECFDF5',
+          '--text-muted': '#6EE7B7',
+          '--num-total': '#FFFFFF',
+          '--num-closed': '#34D399',
+          '--num-transit': '#FBBF24',
+          '--num-delay': '#FB7185',
+        }
+      },
+      gold: {
+        name: 'Royal Amber',
+        dot: '#F59E0B',
+        vars: {
+          '--bg-main': '#0E0B06',
+          '--bg-panel': '#18130A',
+          '--bg-header': '#241C0E',
+          '--bg-hover': '#292011',
+          '--border-color': '#3D2F17',
+          '--border-sub': '#2B2110',
+          '--accent': '#F59E0B',
+          '--accent-text': '#1C1302',
+          '--text-main': '#FEF3C7',
+          '--text-muted': '#D97706',
+          '--num-total': '#FFFFFF',
+          '--num-closed': '#A3E635',
+          '--num-transit': '#FBBF24',
+          '--num-delay': '#F87171',
+        }
+      }
+    };
 
     const ClientBrandBadge = ({ name }) => {
+      const lower = (name || '').toLowerCase();
+      if (lower.includes('dhl')) {
+        return (
+          <div className="w-5 h-5 rounded bg-[#FFCC00] flex items-center justify-center shrink-0">
+            <span className="text-[#D40511] font-black text-[7px]">DHL</span>
+          </div>
+        );
+      }
+      if (lower.includes('trackon')) {
+        return (
+          <div className="w-5 h-5 rounded bg-[#990000] flex items-center justify-center shrink-0">
+            <span className="text-white font-black text-[8px]">T</span>
+          </div>
+        );
+      }
+      if (lower.includes('amazon')) {
+        return (
+          <div className="w-5 h-5 rounded bg-[#131921] border border-amber-500/40 flex items-center justify-center shrink-0">
+            <span className="text-[#FF9900] font-black text-[10px]">a</span>
+          </div>
+        );
+      }
+      if (lower.includes('flipkart')) {
+        return (
+          <div className="w-5 h-5 rounded bg-[#2874F0] flex items-center justify-center shrink-0">
+            <span className="text-[#FFE500] italic font-black text-[10px]">f</span>
+          </div>
+        );
+      }
       const initial = (name || 'C').charAt(0).toUpperCase();
       return (
-        <div className="w-5 h-5 rounded bg-[#242926] border border-[#2C312E] flex items-center justify-center shrink-0">
-          <span className="text-[#D2DDB2] font-black text-[9px]">{initial}</span>
+        <div className="w-5 h-5 rounded flex items-center justify-center shrink-0" style={{ background: 'var(--bg-header)', border: '1px solid var(--border-color)' }}>
+          <span className="font-black text-[9px]" style={{ color: 'var(--accent)' }}>{initial}</span>
         </div>
       );
     };
@@ -174,28 +326,15 @@ html_code = """<!DOCTYPE html>
       { id: 'TRP-9030', date: '2026-11-10', vehicleNo: 'HR-55-XY-8811', client: 'Delhivery Crossdock', staff: 'Kuldeep Gill', route: 'Sonipat DC → Ludhiana TC', status: 'Trip Closed', remarks: 'On time standard transit' },
     ];
 
-    // Video-style Metric Card Component with Animation
-    const MetricCard = ({ title, value, subtitle, bgColor, textColor, delay }) => (
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 15 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 0.4, delay, ease: "easeOut" }}
-        className={`p-5 rounded-3xl ${bgColor} ${textColor} flex flex-col justify-between shadow-sm relative overflow-hidden`}
-        style={{ minHeight: '125px' }}
-      >
-        <div className="text-[10px] font-black uppercase tracking-widest opacity-90">{title}</div>
-        <div className="mt-4">
-          <div className="text-4xl font-black tracking-tighter">{value}</div>
-          <div className="text-[9px] font-bold opacity-75 mt-1">{subtitle}</div>
-        </div>
-      </motion.div>
-    );
-
     function App() {
       const [records, setRecords] = useState(INITIAL_RECORDS);
       const [uploadedFileCount, setUploadedFileCount] = useState(0);
       const [activeTab, setActiveTab] = useState('overall');
       const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+      // Theme state
+      const [themeKey, setThemeKey] = useState('sage');
+      const [showThemeMenu, setShowThemeMenu] = useState(false);
 
       const [selectedDate, setSelectedDate] = useState('2026-11-10');
       const [showCalendar, setShowCalendar] = useState(false);
@@ -208,11 +347,19 @@ html_code = """<!DOCTYPE html>
       const [aiGenerating, setAiGenerating] = useState(false);
       const [aiReportOutput, setAiReportOutput] = useState(null);
 
+      // Apply selected theme variables to document root
+      useEffect(() => {
+        const themeObj = THEMES[themeKey] || THEMES.sage;
+        Object.entries(themeObj.vars).forEach(([k, v]) => {
+          document.documentElement.style.setProperty(k, v);
+        });
+      }, [themeKey]);
+
       useEffect(() => {
         if (window.lucide) {
           window.lucide.createIcons();
         }
-      }, [activeTab, selectedDate, showCalendar, mobileMenuOpen, aiDelayCategory, aiReportOutput, records]);
+      }, [activeTab, selectedDate, showCalendar, mobileMenuOpen, aiDelayCategory, aiReportOutput, records, themeKey, showThemeMenu]);
 
       const handleMultipleFileUpload = async (e) => {
         const files = Array.from(e.target.files || []);
@@ -302,7 +449,6 @@ html_code = """<!DOCTYPE html>
         e.target.value = '';
       };
 
-      // Perfect Logic for Trip Closed (will never be 0 incorrectly)
       const metrics = useMemo(() => {
         const total = records.length;
         const inTransit = records.filter(r => r.status.toLowerCase().includes('transit') || r.status.toLowerCase().includes('run')).length;
@@ -311,9 +457,7 @@ html_code = """<!DOCTYPE html>
           const st = (r.status || '').toLowerCase();
           return st.includes('delay') || rem.includes('breakdown') || rem.includes('jam') || rem.includes('leak') || rem.includes('rest') || rem.includes('congestion') || rem.includes('sickness');
         }).length;
-        
-        // Everything not in-transit and not delayed counts accurately as closed
-        const closed = total - inTransit - delayed; 
+        const closed = Math.max(0, total - inTransit - delayed);
 
         return { total, inTransit, closed, delayed };
       }, [records]);
@@ -481,29 +625,27 @@ html_code = """<!DOCTYPE html>
         }, 800);
       };
 
-      const renderSlaColor = (sla) => {
-        if (sla >= 80) return 'text-[#D2DDB2]'; // Sage 
-        if (sla >= 50) return 'text-[#F4C5A9]'; // Peach
-        return 'text-[#E5C3C3]'; // Rose
+      const getSlaStyle = (sla) => {
+        if (sla >= 80) return { color: 'var(--num-closed)' };
+        if (sla >= 50) return { color: 'var(--num-transit)' };
+        return { color: 'var(--num-delay)' };
       };
 
       return (
         <div className="flex flex-col md:flex-row min-h-screen">
           
           {/* Mobile Top Bar */}
-          <div className="md:hidden glass-panel border-b border-[#252A27] px-4 py-3 flex items-center justify-between sticky top-0 z-50">
+          <div className="md:hidden glass-panel px-4 py-3 flex items-center justify-between sticky top-0 z-50">
             <div className="flex items-center space-x-2.5">
-              <div className="w-8 h-8 rounded-lg bg-[#D2DDB2] flex items-center justify-center shadow-lg">
-                <i data-lucide="shield" className="w-4 h-4 text-[#161917]"></i>
+              <div className="w-8 h-8 rounded-lg accent-btn flex items-center justify-center shadow-lg">
+                <i data-lucide="shield" className="w-4 h-4"></i>
               </div>
               <div>
-                <div className="flex items-center space-x-1.5">
-                  <span className="font-black text-xs tracking-wider text-white">FLEET CONTROL</span>
-                </div>
-                <p className="text-[9px] text-[#8F9A94] font-mono tracking-tight">Logistics Command Center</p>
+                <span className="font-black text-xs tracking-wider">FLEET CONTROL</span>
+                <p className="text-[9px] font-mono tracking-tight" style={{ color: 'var(--text-muted)' }}>Logistics Command Center</p>
               </div>
             </div>
-            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-1.5 rounded-lg bg-[#1E2220] text-[#D2DDB2]">
+            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-1.5 rounded-lg" style={{ background: 'var(--bg-header)', color: 'var(--accent)' }}>
               <i data-lucide={mobileMenuOpen ? "x" : "menu"} className="w-5 h-5"></i>
             </button>
           </div>
@@ -515,7 +657,8 @@ html_code = """<!DOCTYPE html>
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                className="md:hidden fixed inset-x-0 top-14 bottom-0 bg-[#0F1110]/95 backdrop-blur-xl z-40 p-4 flex flex-col space-y-2"
+                className="md:hidden fixed inset-x-0 top-14 bottom-0 z-40 p-4 flex flex-col space-y-2 backdrop-blur-xl"
+                style={{ background: 'var(--bg-main)' }}
               >
                 {[
                   { id: 'overall', label: 'Over All Performance', icon: 'activity' },
@@ -525,36 +668,32 @@ html_code = """<!DOCTYPE html>
                   { id: 'delay', label: 'Only Delay Arrival Report', icon: 'alert-triangle' },
                   { id: 'ai_review', label: 'AI Delay Review', icon: 'bot' },
                 ].map((item, idx) => (
-                  <motion.button
+                  <button
                     key={item.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: idx * 0.05 }}
                     onClick={() => { setActiveTab(item.id); setMobileMenuOpen(false); }}
                     className={`w-full flex items-center space-x-3 px-4 py-3.5 rounded-2xl text-[11px] font-bold transition-all ${
-                      activeTab === item.id ? 'sidebar-active' : 'text-[#8F9A94]'
+                      activeTab === item.id ? 'sidebar-active' : ''
                     }`}
+                    style={activeTab !== item.id ? { color: 'var(--text-muted)' } : {}}
                   >
                     <i data-lucide={item.icon} className="w-4 h-4 shrink-0"></i>
                     <span>{item.label}</span>
-                  </motion.button>
+                  </button>
                 ))}
               </motion.div>
             )}
           </AnimatePresence>
 
           {/* Desktop Sidebar */}
-          <aside className="hidden md:flex md:w-64 glass-panel border-r border-[#252A27] p-4 flex-col shrink-0 justify-between">
+          <aside className="hidden md:flex md:w-60 glass-panel border-r p-4 flex-col shrink-0 justify-between">
             <div className="space-y-6">
               <div className="flex items-center space-x-3 px-2 py-1">
-                <div className="w-9 h-9 rounded-xl bg-[#D2DDB2] flex items-center justify-center shadow-lg">
-                  <i data-lucide="shield" className="w-4 h-4 text-[#161917]"></i>
+                <div className="w-9 h-9 rounded-xl accent-btn flex items-center justify-center shadow-lg">
+                  <i data-lucide="shield" className="w-4 h-4"></i>
                 </div>
                 <div>
-                  <div className="flex items-center space-x-1.5">
-                    <span className="font-black text-xs tracking-wider text-white">FLEET CONTROL</span>
-                  </div>
-                  <p className="text-[9px] text-[#8F9A94] font-mono tracking-tight">Logistics Command Center</p>
+                  <span className="font-black text-xs tracking-wider">FLEET CONTROL</span>
+                  <p className="text-[9px] font-mono tracking-tight" style={{ color: 'var(--text-muted)' }}>Logistics Command Center</p>
                 </div>
               </div>
 
@@ -566,48 +705,41 @@ html_code = """<!DOCTYPE html>
                   { id: 'arrival', label: 'Day Wise Arrival Report', icon: 'calendar' },
                   { id: 'delay', label: 'Only Delay Arrival Report', icon: 'alert-triangle' },
                   { id: 'ai_review', label: 'AI Delay Review', icon: 'bot' },
-                ].map((item, idx) => {
+                ].map((item) => {
                   const isActive = activeTab === item.id;
                   return (
-                    <motion.button
+                    <button
                       key={item.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.3, delay: idx * 0.05 }}
                       onClick={() => setActiveTab(item.id)}
-                      className={`relative w-full flex items-center space-x-3 px-4 py-3 rounded-2xl text-[11px] font-bold transition-all ${
-                        isActive
-                          ? 'sidebar-active'
-                          : 'text-[#8F9A94] hover:text-white hover:bg-[#1E2220]'
+                      className={`relative w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-2xl text-[11px] font-bold transition-all ${
+                        isActive ? 'sidebar-active' : ''
                       }`}
+                      style={!isActive ? { color: 'var(--text-muted)' } : {}}
                     >
-                      <i data-lucide={item.icon} className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#1A2015]' : 'text-[#8F9A94]'}`}></i>
+                      <i data-lucide={item.icon} className="w-4 h-4 shrink-0"></i>
                       <span className="truncate tracking-wide">{item.label}</span>
-                    </motion.button>
+                    </button>
                   );
                 })}
               </nav>
             </div>
 
-            <div className="pt-4 border-t border-[#252A27] text-[10px] text-[#8F9A94] font-mono flex items-center justify-between px-2">
+            <div className="pt-4 border-t text-[10px] font-mono flex items-center justify-between px-2" style={{ borderColor: 'var(--border-color)', color: 'var(--text-muted)' }}>
               <span>SYSTEM</span>
               <span className="flex items-center space-x-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#D2DDB2] animate-ping"></span>
-                <span className="text-[#D2DDB2] font-bold">ONLINE</span>
+                <span className="w-1.5 h-1.5 rounded-full animate-ping" style={{ background: 'var(--accent)' }}></span>
+                <span className="font-bold" style={{ color: 'var(--accent)' }}>ONLINE</span>
               </span>
             </div>
           </aside>
 
           {/* Main Workspace */}
-          <main className="flex-1 p-3 md:p-8 max-w-7xl mx-auto w-full">
+          <main className="flex-1 p-3 md:p-7 max-w-7xl mx-auto w-full space-y-5">
             
-            <motion.div 
-              initial={{ opacity: 0, y: -10 }} 
-              animate={{ opacity: 1, y: 0 }} 
-              className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6"
-            >
+            {/* Top Bar with Theme Switcher & Upload Button */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b" style={{ borderColor: 'var(--border-color)' }}>
               <div>
-                <h1 className="text-2xl md:text-3xl font-black text-[#F1F5F2] tracking-tight">
+                <h1 className="text-2xl md:text-3xl font-black tracking-tight">
                   {activeTab === 'overall' && 'Over All Performance'}
                   {activeTab === 'client' && 'Client Wise Performance Report'}
                   {activeTab === 'staff' && 'Staff Wise Performance Report'}
@@ -615,15 +747,52 @@ html_code = """<!DOCTYPE html>
                   {activeTab === 'delay' && 'Only Delay Arrival Exceptions'}
                   {activeTab === 'ai_review' && 'AI Operational Delay Review'}
                 </h1>
-                <p className="text-xs text-[#8F9A94] font-medium mt-1">
+                <p className="text-xs font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>
                   Real-time operational telemetry, SLA compliance, and dispatch management
                 </p>
               </div>
 
-              {activeTab === 'overall' && (
-                <div className="flex items-center space-x-2 shrink-0">
-                  {/* Load Sample button removed completely as requested */}
-                  <label className="flex items-center space-x-2 px-5 py-2.5 rounded-2xl bg-[#D2DDB2] text-[#1A2015] hover:bg-[#c2ce9f] text-[11px] font-black cursor-pointer transition-all shadow-sm">
+              <div className="flex items-center space-x-2.5 shrink-0">
+                
+                {/* THEME / COLOUR SWITCHER BUTTON */}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowThemeMenu(!showThemeMenu)}
+                    className="flex items-center space-x-2 px-3.5 py-2 rounded-xl text-[11px] font-bold border transition"
+                    style={{ background: 'var(--bg-header)', borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
+                  >
+                    <span className="w-3 h-3 rounded-full" style={{ background: THEMES[themeKey].dot }}></span>
+                    <i data-lucide="palette" className="w-3.5 h-3.5" style={{ color: 'var(--accent)' }}></i>
+                    <span>Theme: {THEMES[themeKey].name}</span>
+                    <i data-lucide="chevron-down" className="w-3 h-3" style={{ color: 'var(--text-muted)' }}></i>
+                  </button>
+
+                  {showThemeMenu && (
+                    <div className="absolute right-0 mt-2 w-48 rounded-2xl p-2 shadow-2xl z-50 glass-panel space-y-1">
+                      {Object.entries(THEMES).map(([k, th]) => (
+                        <button
+                          key={k}
+                          onClick={() => { setThemeKey(k); setShowThemeMenu(false); }}
+                          className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition"
+                          style={{
+                            background: themeKey === k ? 'var(--bg-hover)' : 'transparent',
+                            color: 'var(--text-main)'
+                          }}
+                        >
+                          <div className="flex items-center space-x-2.5">
+                            <span className="w-3 h-3 rounded-full border border-white/20" style={{ background: th.dot }}></span>
+                            <span>{th.name}</span>
+                          </div>
+                          {themeKey === k && <i data-lucide="check" className="w-3.5 h-3.5" style={{ color: 'var(--accent)' }}></i>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Upload Excel Button */}
+                {activeTab === 'overall' && (
+                  <label className="flex items-center space-x-2 px-4 py-2 rounded-xl accent-btn text-[11px] font-black cursor-pointer transition-all shadow-sm">
                     <i data-lucide="upload-cloud" className="w-4 h-4"></i>
                     <span>{uploadedFileCount > 0 ? `${uploadedFileCount} File(s) Uploaded` : 'Upload Multiple Excel'}</span>
                     <input
@@ -634,42 +803,91 @@ html_code = """<!DOCTYPE html>
                       className="hidden"
                     />
                   </label>
-                </div>
-              )}
-            </motion.div>
-
-            {/* Top KPI Cards styled identically to modern fintech dashboards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <MetricCard title="TOTAL TRIPS" value={metrics.total} subtitle="All recorded dispatches" bgColor="bg-[#242926]" textColor="text-[#F1F5F2]" delay={0.1} />
-              <MetricCard title="TOTAL TRIP CLOSED" value={metrics.closed} subtitle="Successfully delivered" bgColor="bg-[#D2DDB2]" textColor="text-[#1A2015]" delay={0.2} />
-              <MetricCard title="IN-TRANSIT VEHICLE" value={metrics.inTransit} subtitle="Active on route" bgColor="bg-[#F4C5A9]" textColor="text-[#2C1A0F]" delay={0.3} />
-              <MetricCard title="DELAY TRIP CLOSED" value={metrics.delayed} subtitle="Exceptions & late arrivals" bgColor="bg-[#E5C3C3]" textColor="text-[#2D1616]" delay={0.4} />
+                )}
+              </div>
             </div>
 
-            {/* Tab Transitions wrapper */}
+            {/* CLEAN BORDERLESS NUMBERS ONLY (NO CARDS) */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 py-3 px-1 border-b" style={{ borderColor: 'var(--border-color)' }}>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}
+                className="flex items-baseline space-x-3 border-l-2 pl-4"
+                style={{ borderColor: 'var(--num-total)' }}
+              >
+                <span className="text-3xl md:text-4xl font-black font-mono tracking-tight" style={{ color: 'var(--num-total)' }}>
+                  {metrics.total}
+                </span>
+                <div>
+                  <div className="text-[11px] font-black uppercase tracking-wider">TOTAL TRIPS</div>
+                  <div className="text-[9px] font-medium" style={{ color: 'var(--text-muted)' }}>All recorded dispatches</div>
+                </div>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.08 }}
+                className="flex items-baseline space-x-3 border-l-2 pl-4"
+                style={{ borderColor: 'var(--num-closed)' }}
+              >
+                <span className="text-3xl md:text-4xl font-black font-mono tracking-tight" style={{ color: 'var(--num-closed)' }}>
+                  {metrics.closed}
+                </span>
+                <div>
+                  <div className="text-[11px] font-black uppercase tracking-wider">TOTAL TRIP CLOSED</div>
+                  <div className="text-[9px] font-medium" style={{ color: 'var(--text-muted)' }}>Successfully delivered</div>
+                </div>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.16 }}
+                className="flex items-baseline space-x-3 border-l-2 pl-4"
+                style={{ borderColor: 'var(--num-transit)' }}
+              >
+                <span className="text-3xl md:text-4xl font-black font-mono tracking-tight" style={{ color: 'var(--num-transit)' }}>
+                  {metrics.inTransit}
+                </span>
+                <div>
+                  <div className="text-[11px] font-black uppercase tracking-wider">IN-TRANSIT VEHICLE</div>
+                  <div className="text-[9px] font-medium" style={{ color: 'var(--text-muted)' }}>Active on route</div>
+                </div>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.24 }}
+                className="flex items-baseline space-x-3 border-l-2 pl-4"
+                style={{ borderColor: 'var(--num-delay)' }}
+              >
+                <span className="text-3xl md:text-4xl font-black font-mono tracking-tight" style={{ color: 'var(--num-delay)' }}>
+                  {metrics.delayed}
+                </span>
+                <div>
+                  <div className="text-[11px] font-black uppercase tracking-wider">DELAY TRIP CLOSED</div>
+                  <div className="text-[9px] font-medium" style={{ color: 'var(--text-muted)' }}>Exceptions & late arrivals</div>
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Tab Views */}
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeTab}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.4 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.3 }}
                 className="space-y-6"
               >
                 {activeTab === 'overall' && (
                   <div className="space-y-6">
-                    {/* CLIENT WISE - NO RATING OR BARS */}
-                    <div className="glass-panel rounded-3xl p-5 space-y-4 shadow-sm">
+                    {/* CLIENT WISE */}
+                    <div className="glass-panel rounded-3xl p-5 space-y-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
-                          <div className="w-8 h-8 rounded-xl bg-[#242926] border border-[#2C312E] flex items-center justify-center text-[#D2DDB2]">
+                          <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: 'var(--bg-header)', border: '1px solid var(--border-color)', color: 'var(--accent)' }}>
                             <i data-lucide="briefcase" className="w-4 h-4"></i>
                           </div>
-                          <div>
-                            <h2 className="text-sm font-black text-white tracking-wide">Client Wise Performance Report</h2>
-                          </div>
+                          <h2 className="text-sm font-black tracking-wide">Client Wise Performance Report</h2>
                         </div>
-                        <span className="text-[10px] font-mono px-3 py-1 rounded-xl bg-[#242926] text-[#8F9A94] border border-[#2C312E] font-bold">
+                        <span className="text-[10px] font-mono px-3 py-1 rounded-xl font-bold" style={{ background: 'var(--bg-header)', color: 'var(--text-muted)', border: '1px solid var(--border-color)' }}>
                           {clientStats.length} Accounts
                         </span>
                       </div>
@@ -687,16 +905,16 @@ html_code = """<!DOCTYPE html>
                           </thead>
                           <tbody>
                             {clientStats.map((c, i) => (
-                              <tr key={i} className="hover:bg-[#1E2220] transition-colors">
+                              <tr key={i} className="transition-colors">
                                 <td className="py-3 px-4 flex items-center space-x-3">
                                   <ClientBrandBadge name={c.name} />
-                                  <span className="font-bold text-[#F1F5F2] tracking-wide">{c.name}</span>
+                                  <span className="font-bold tracking-wide">{c.name}</span>
                                 </td>
-                                <td className="py-3 px-4 text-center font-mono font-bold text-white">{c.total}</td>
-                                <td className="py-3 px-4 text-center font-mono font-bold text-[#D2DDB2]">{c.closed}</td>
-                                <td className="py-3 px-4 text-center font-mono font-bold text-[#E5C3C3]">{c.delayed}</td>
+                                <td className="py-3 px-4 text-center font-mono font-bold">{c.total}</td>
+                                <td className="py-3 px-4 text-center font-mono font-bold" style={{ color: 'var(--num-closed)' }}>{c.closed}</td>
+                                <td className="py-3 px-4 text-center font-mono font-bold" style={{ color: 'var(--num-delay)' }}>{c.delayed}</td>
                                 <td className="py-3 px-4 text-center">
-                                  <span className={`font-mono text-sm font-black ${renderSlaColor(c.sla)}`}>{c.sla}%</span>
+                                  <span className="font-mono text-sm font-black" style={getSlaStyle(c.sla)}>{c.sla}%</span>
                                 </td>
                               </tr>
                             ))}
@@ -705,18 +923,16 @@ html_code = """<!DOCTYPE html>
                       </div>
                     </div>
 
-                    {/* STAFF WISE - NO RATING OR BARS */}
-                    <div className="glass-panel rounded-3xl p-5 space-y-4 shadow-sm">
+                    {/* STAFF WISE */}
+                    <div className="glass-panel rounded-3xl p-5 space-y-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
-                          <div className="w-8 h-8 rounded-xl bg-[#242926] border border-[#2C312E] flex items-center justify-center text-[#D2DDB2]">
+                          <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: 'var(--bg-header)', border: '1px solid var(--border-color)', color: 'var(--accent)' }}>
                             <i data-lucide="user" className="w-4 h-4"></i>
                           </div>
-                          <div>
-                            <h2 className="text-sm font-black text-white tracking-wide">Staff Wise Performance Report</h2>
-                          </div>
+                          <h2 className="text-sm font-black tracking-wide">Staff Wise Performance Report</h2>
                         </div>
-                        <span className="text-[10px] font-mono px-3 py-1 rounded-xl bg-[#242926] text-[#8F9A94] border border-[#2C312E] font-bold">
+                        <span className="text-[10px] font-mono px-3 py-1 rounded-xl font-bold" style={{ background: 'var(--bg-header)', color: 'var(--text-muted)', border: '1px solid var(--border-color)' }}>
                           {staffStats.length} Drivers
                         </span>
                       </div>
@@ -734,13 +950,55 @@ html_code = """<!DOCTYPE html>
                           </thead>
                           <tbody>
                             {staffStats.map((s, i) => (
-                              <tr key={i} className="hover:bg-[#1E2220] transition-colors">
-                                <td className="py-3 px-4 font-bold text-[#F1F5F2] tracking-wide">{s.name}</td>
-                                <td className="py-3 px-4 text-center font-mono font-bold text-white">{s.total}</td>
-                                <td className="py-3 px-4 text-center font-mono font-bold text-[#D2DDB2]">{s.closed}</td>
-                                <td className="py-3 px-4 text-center font-mono font-bold text-[#E5C3C3]">{s.delayed}</td>
+                              <tr key={i} className="transition-colors">
+                                <td className="py-3 px-4 font-bold tracking-wide">{s.name}</td>
+                                <td className="py-3 px-4 text-center font-mono font-bold">{s.total}</td>
+                                <td className="py-3 px-4 text-center font-mono font-bold" style={{ color: 'var(--num-closed)' }}>{s.closed}</td>
+                                <td className="py-3 px-4 text-center font-mono font-bold" style={{ color: 'var(--num-delay)' }}>{s.delayed}</td>
                                 <td className="py-3 px-4 text-center">
-                                  <span className={`font-mono text-sm font-black ${renderSlaColor(s.sla)}`}>{s.sla}%</span>
+                                  <span className="font-mono text-sm font-black" style={getSlaStyle(s.sla)}>{s.sla}%</span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* ROUTE WISE */}
+                    <div className="glass-panel rounded-3xl p-5 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: 'var(--bg-header)', border: '1px solid var(--border-color)', color: 'var(--accent)' }}>
+                            <i data-lucide="map-pin" className="w-4 h-4"></i>
+                          </div>
+                          <h2 className="text-sm font-black tracking-wide">Route Wise Performance Report</h2>
+                        </div>
+                        <span className="text-[10px] font-mono px-3 py-1 rounded-xl font-bold" style={{ background: 'var(--bg-header)', color: 'var(--text-muted)', border: '1px solid var(--border-color)' }}>
+                          {routeStats.length} Corridors
+                        </span>
+                      </div>
+
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-[11px] grid-table">
+                          <thead>
+                            <tr>
+                              <th className="py-3 px-4">ROUTE / CORRIDOR</th>
+                              <th className="py-3 px-4 text-center">TOTAL DISPATCHES</th>
+                              <th className="py-3 px-4 text-center">TRIP CLOSED</th>
+                              <th className="py-3 px-4 text-center">DELAY CLOSED</th>
+                              <th className="py-3 px-4 text-center">CORRIDOR SLA %</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {routeStats.map((r, i) => (
+                              <tr key={i} className="transition-colors">
+                                <td className="py-3 px-4 font-mono font-bold">{r.name}</td>
+                                <td className="py-3 px-4 text-center font-mono font-bold">{r.total}</td>
+                                <td className="py-3 px-4 text-center font-mono font-bold" style={{ color: 'var(--num-closed)' }}>{r.closed}</td>
+                                <td className="py-3 px-4 text-center font-mono font-bold" style={{ color: 'var(--num-delay)' }}>{r.delayed}</td>
+                                <td className="py-3 px-4 text-center">
+                                  <span className="font-mono text-sm font-black" style={getSlaStyle(r.sla)}>{r.sla}%</span>
                                 </td>
                               </tr>
                             ))}
@@ -752,18 +1010,7 @@ html_code = """<!DOCTYPE html>
                 )}
 
                 {activeTab === 'client' && (
-                  <div className="glass-panel rounded-3xl p-5 space-y-4 shadow-sm">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 rounded-xl bg-[#242926] border border-[#2C312E] flex items-center justify-center text-[#D2DDB2]">
-                          <i data-lucide="briefcase" className="w-4 h-4"></i>
-                        </div>
-                        <div>
-                          <h2 className="text-sm font-black text-white tracking-wide">Client Wise Performance Report</h2>
-                        </div>
-                      </div>
-                    </div>
-
+                  <div className="glass-panel rounded-3xl p-5 space-y-4">
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-[11px] grid-table">
                         <thead>
@@ -777,16 +1024,16 @@ html_code = """<!DOCTYPE html>
                         </thead>
                         <tbody>
                           {clientStats.map((c, i) => (
-                            <tr key={i} className="hover:bg-[#1E2220] transition-colors">
+                            <tr key={i} className="transition-colors">
                               <td className="py-3 px-4 flex items-center space-x-3">
                                 <ClientBrandBadge name={c.name} />
-                                <span className="font-bold text-[#F1F5F2] tracking-wide">{c.name}</span>
+                                <span className="font-bold tracking-wide">{c.name}</span>
                               </td>
-                              <td className="py-3 px-4 text-center font-mono font-bold text-white">{c.total}</td>
-                              <td className="py-3 px-4 text-center font-mono font-bold text-[#D2DDB2]">{c.closed}</td>
-                              <td className="py-3 px-4 text-center font-mono font-bold text-[#E5C3C3]">{c.delayed}</td>
+                              <td className="py-3 px-4 text-center font-mono font-bold">{c.total}</td>
+                              <td className="py-3 px-4 text-center font-mono font-bold" style={{ color: 'var(--num-closed)' }}>{c.closed}</td>
+                              <td className="py-3 px-4 text-center font-mono font-bold" style={{ color: 'var(--num-delay)' }}>{c.delayed}</td>
                               <td className="py-3 px-4 text-center">
-                                <span className={`font-mono text-sm font-black ${renderSlaColor(c.sla)}`}>{c.sla}%</span>
+                                <span className="font-mono text-sm font-black" style={getSlaStyle(c.sla)}>{c.sla}%</span>
                               </td>
                             </tr>
                           ))}
@@ -797,18 +1044,7 @@ html_code = """<!DOCTYPE html>
                 )}
 
                 {activeTab === 'staff' && (
-                  <div className="glass-panel rounded-3xl p-5 space-y-4 shadow-sm">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 rounded-xl bg-[#242926] border border-[#2C312E] flex items-center justify-center text-[#D2DDB2]">
-                          <i data-lucide="user" className="w-4 h-4"></i>
-                        </div>
-                        <div>
-                          <h2 className="text-sm font-black text-white tracking-wide">Staff Wise Performance Report</h2>
-                        </div>
-                      </div>
-                    </div>
-
+                  <div className="glass-panel rounded-3xl p-5 space-y-4">
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-[11px] grid-table">
                         <thead>
@@ -822,13 +1058,13 @@ html_code = """<!DOCTYPE html>
                         </thead>
                         <tbody>
                           {staffStats.map((s, i) => (
-                            <tr key={i} className="hover:bg-[#1E2220] transition-colors">
-                              <td className="py-3 px-4 font-bold text-[#F1F5F2] tracking-wide">{s.name}</td>
-                              <td className="py-3 px-4 text-center font-mono font-bold text-white">{s.total}</td>
-                              <td className="py-3 px-4 text-center font-mono font-bold text-[#D2DDB2]">{s.closed}</td>
-                              <td className="py-3 px-4 text-center font-mono font-bold text-[#E5C3C3]">{s.delayed}</td>
+                            <tr key={i} className="transition-colors">
+                              <td className="py-3 px-4 font-bold tracking-wide">{s.name}</td>
+                              <td className="py-3 px-4 text-center font-mono font-bold">{s.total}</td>
+                              <td className="py-3 px-4 text-center font-mono font-bold" style={{ color: 'var(--num-closed)' }}>{s.closed}</td>
+                              <td className="py-3 px-4 text-center font-mono font-bold" style={{ color: 'var(--num-delay)' }}>{s.delayed}</td>
                               <td className="py-3 px-4 text-center">
-                                <span className={`font-mono text-sm font-black ${renderSlaColor(s.sla)}`}>{s.sla}%</span>
+                                <span className="font-mono text-sm font-black" style={getSlaStyle(s.sla)}>{s.sla}%</span>
                               </td>
                             </tr>
                           ))}
@@ -839,23 +1075,21 @@ html_code = """<!DOCTYPE html>
                 )}
 
                 {activeTab === 'arrival' && (
-                  <div className="glass-panel rounded-3xl p-5 space-y-5 shadow-sm">
-                    
+                  <div className="glass-panel rounded-3xl p-5 space-y-5">
                     <div className="flex flex-wrap items-center justify-between gap-3 pb-2">
                       <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 rounded-xl bg-[#242926] border border-[#2C312E] flex items-center justify-center text-[#D2DDB2]">
+                        <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: 'var(--bg-header)', border: '1px solid var(--border-color)', color: 'var(--accent)' }}>
                           <i data-lucide="calendar" className="w-4 h-4"></i>
                         </div>
-                        <div>
-                          <h2 className="text-sm font-black text-white tracking-wide">Day Wise Arrival Chronology</h2>
-                        </div>
+                        <h2 className="text-sm font-black tracking-wide">Day Wise Arrival Chronology</h2>
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2.5">
                         <select
                           value={selectedClientFilter}
                           onChange={(e) => setSelectedClientFilter(e.target.value)}
-                          className="bg-[#161917] border border-[#252A27] text-[11px] font-bold text-[#E6EBE1] rounded-xl px-4 py-2 focus:outline-none focus:border-[#D2DDB2] transition cursor-pointer"
+                          className="text-[11px] font-bold rounded-xl px-4 py-2 focus:outline-none cursor-pointer border"
+                          style={{ background: 'var(--bg-header)', borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
                         >
                           <option value="">All Clients</option>
                           {uniqueClients.map((cl, idx) => <option key={idx} value={cl}>{cl}</option>)}
@@ -864,7 +1098,8 @@ html_code = """<!DOCTYPE html>
                         <select
                           value={selectedStaffFilter}
                           onChange={(e) => setSelectedStaffFilter(e.target.value)}
-                          className="bg-[#161917] border border-[#252A27] text-[11px] font-bold text-[#E6EBE1] rounded-xl px-4 py-2 focus:outline-none focus:border-[#D2DDB2] transition cursor-pointer"
+                          className="text-[11px] font-bold rounded-xl px-4 py-2 focus:outline-none cursor-pointer border"
+                          style={{ background: 'var(--bg-header)', borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
                         >
                           <option value="">All Staff / Drivers</option>
                           {uniqueStaff.map((st, idx) => <option key={idx} value={st}>{st}</option>)}
@@ -873,63 +1108,60 @@ html_code = """<!DOCTYPE html>
                         <div className="relative">
                           <button
                             onClick={() => setShowCalendar(!showCalendar)}
-                            className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-[#242926] border border-[#2C312E] text-[#D2DDB2] hover:bg-[#2C312E] text-xs font-mono font-bold transition shadow-sm"
+                            className="flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-mono font-bold border transition"
+                            style={{ background: 'var(--bg-header)', borderColor: 'var(--border-color)', color: 'var(--accent)' }}
                           >
                             <i data-lucide="calendar" className="w-4 h-4"></i>
                             <span>{selectedDate || 'Select Date'}</span>
-                            <i data-lucide="chevron-down" className="w-3 h-3 text-[#8F9A94]"></i>
+                            <i data-lucide="chevron-down" className="w-3 h-3"></i>
                           </button>
 
-                          <AnimatePresence>
-                            {showCalendar && (
-                              <motion.div 
-                                initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-                                className="absolute right-0 mt-2 z-50 w-60 glass-panel rounded-2xl p-4 shadow-2xl space-y-3"
-                              >
-                                <div className="flex items-center justify-between text-xs font-bold text-white">
-                                  <button onClick={() => { if (calMonth === 0) { setCalMonth(11); setCalYear(calYear - 1); } else { setCalMonth(calMonth - 1); } }} className="p-1.5 rounded-lg hover:bg-[#242926] text-[#D2DDB2]">
-                                    <i data-lucide="chevron-left" className="w-4 h-4"></i>
-                                  </button>
-                                  <span className="font-mono text-[11px]">
-                                    {["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"][calMonth]} {calYear}
-                                  </span>
-                                  <button onClick={() => { if (calMonth === 11) { setCalMonth(0); setCalYear(calYear + 1); } else { setCalMonth(calMonth + 1); } }} className="p-1.5 rounded-lg hover:bg-[#242926] text-[#D2DDB2]">
-                                    <i data-lucide="chevron-right" className="w-4 h-4"></i>
-                                  </button>
-                                </div>
-                                <div className="grid grid-cols-7 text-center text-[10px] font-black text-[#8F9A94] font-mono">
-                                  <span>MO</span><span>TU</span><span>WE</span><span>TH</span><span>FR</span><span>SA</span><span>SU</span>
-                                </div>
-                                <div className="grid grid-cols-7 gap-1">
-                                  {calendarDays.map((item, idx) => {
-                                    if (!item) return <div key={idx} className="h-7 w-7"></div>;
-                                    const isSelected = selectedDate === item.dateStr;
-                                    return (
-                                      <button
-                                        key={idx}
-                                        onClick={() => { setSelectedDate(item.dateStr); setShowCalendar(false); }}
-                                        className={`h-7 w-7 rounded-lg text-[10px] font-mono font-bold flex items-center justify-center transition-colors ${
-                                          isSelected ? 'bg-[#D2DDB2] text-[#1A2015] shadow-sm' : 'hover:bg-[#242926] text-[#E6EBE1]'
-                                        }`}
-                                      >
-                                        {item.day}
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                                <div className="pt-2 border-t border-[#252A27] flex items-center justify-between text-[10px]">
-                                  <button onClick={() => { setSelectedDate(''); setShowCalendar(false); }} className="text-[#E5C3C3] hover:text-white font-black">Clear Date</button>
-                                  <button onClick={() => setShowCalendar(false)} className="text-[#8F9A94] hover:text-white font-black">Close</button>
-                                </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
+                          {showCalendar && (
+                            <div className="absolute right-0 mt-2 z-50 w-60 glass-panel rounded-2xl p-4 shadow-2xl space-y-3">
+                              <div className="flex items-center justify-between text-xs font-bold">
+                                <button onClick={() => { if (calMonth === 0) { setCalMonth(11); setCalYear(calYear - 1); } else { setCalMonth(calMonth - 1); } }} className="p-1.5 rounded-lg" style={{ color: 'var(--accent)' }}>
+                                  <i data-lucide="chevron-left" className="w-4 h-4"></i>
+                                </button>
+                                <span className="font-mono text-[11px]">
+                                  {["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"][calMonth]} {calYear}
+                                </span>
+                                <button onClick={() => { if (calMonth === 11) { setCalMonth(0); setCalYear(calYear + 1); } else { setCalMonth(calMonth + 1); } }} className="p-1.5 rounded-lg" style={{ color: 'var(--accent)' }}>
+                                  <i data-lucide="chevron-right" className="w-4 h-4"></i>
+                                </button>
+                              </div>
+                              <div className="grid grid-cols-7 text-center text-[10px] font-black font-mono" style={{ color: 'var(--text-muted)' }}>
+                                <span>MO</span><span>TU</span><span>WE</span><span>TH</span><span>FR</span><span>SA</span><span>SU</span>
+                              </div>
+                              <div className="grid grid-cols-7 gap-1">
+                                {calendarDays.map((item, idx) => {
+                                  if (!item) return <div key={idx} className="h-7 w-7"></div>;
+                                  const isSelected = selectedDate === item.dateStr;
+                                  return (
+                                    <button
+                                      key={idx}
+                                      onClick={() => { setSelectedDate(item.dateStr); setShowCalendar(false); }}
+                                      className={`h-7 w-7 rounded-lg text-[10px] font-mono font-bold flex items-center justify-center transition-colors ${
+                                        isSelected ? 'accent-btn' : ''
+                                      }`}
+                                    >
+                                      {item.day}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                              <div className="pt-2 border-t flex items-center justify-between text-[10px]" style={{ borderColor: 'var(--border-color)' }}>
+                                <button onClick={() => { setSelectedDate(''); setShowCalendar(false); }} className="font-black" style={{ color: 'var(--num-delay)' }}>Clear Date</button>
+                                <button onClick={() => setShowCalendar(false)} className="font-black" style={{ color: 'var(--text-muted)' }}>Close</button>
+                              </div>
+                            </div>
+                          )}
                         </div>
 
                         {(selectedDate || selectedClientFilter || selectedStaffFilter) && (
                           <button
                             onClick={() => { setSelectedDate(''); setSelectedClientFilter(''); setSelectedStaffFilter(''); }}
-                            className="p-2.5 rounded-xl bg-[#242926] border border-[#2C312E] hover:bg-[#2C312E] text-[#E5C3C3] hover:text-white transition shadow-sm"
+                            className="p-2 rounded-xl border transition"
+                            style={{ background: 'var(--bg-header)', borderColor: 'var(--border-color)', color: 'var(--num-delay)' }}
                             title="Reset Filters"
                           >
                             <i data-lucide="x" className="w-4 h-4"></i>
@@ -953,30 +1185,29 @@ html_code = """<!DOCTYPE html>
                         <tbody>
                           {filteredArrivals.length === 0 ? (
                             <tr>
-                              <td colSpan="6" className="py-12 text-center text-[#8F9A94] font-mono font-bold text-xs">
+                              <td colSpan="6" className="py-12 text-center font-mono font-bold text-xs" style={{ color: 'var(--text-muted)' }}>
                                 No matching dispatches found.
                               </td>
                             </tr>
                           ) : (
                             filteredArrivals.map((row, idx) => (
-                              <tr key={idx} className="hover:bg-[#1E2220] transition-colors">
-                                <td className="py-3 px-4 font-mono font-bold text-white tracking-wide">{row.vehicleNo}</td>
+                              <tr key={idx} className="transition-colors">
+                                <td className="py-3 px-4 font-mono font-bold tracking-wide">{row.vehicleNo}</td>
                                 <td className="py-3 px-4 flex items-center space-x-3">
                                   <ClientBrandBadge name={row.client} />
-                                  <span className="font-bold text-[#F1F5F2] tracking-wide">{row.client}</span>
+                                  <span className="font-bold tracking-wide">{row.client}</span>
                                 </td>
-                                <td className="py-3 px-4 font-medium text-[#E6EBE1]">{row.staff}</td>
-                                <td className="py-3 px-4 font-mono text-[10px] text-[#8F9A94]">{row.route}</td>
+                                <td className="py-3 px-4 font-medium">{row.staff}</td>
+                                <td className="py-3 px-4 font-mono text-[10px]" style={{ color: 'var(--text-muted)' }}>{row.route}</td>
                                 <td className="py-3 px-4">
-                                  <span className={`px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-wider ${
-                                    row.status.toLowerCase().includes('closed')
-                                      ? 'bg-[#D2DDB2]/10 text-[#D2DDB2]'
-                                      : 'bg-[#F4C5A9]/10 text-[#F4C5A9]'
-                                  }`}>
+                                  <span className="px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-wider" style={{
+                                    background: 'var(--bg-header)',
+                                    color: row.status.toLowerCase().includes('closed') ? 'var(--num-closed)' : 'var(--num-transit)'
+                                  }}>
                                     {row.status}
                                   </span>
                                 </td>
-                                <td className="py-3 px-4 text-[#8F9A94] text-[10px] font-medium italic">{row.remarks}</td>
+                                <td className="py-3 px-4 text-[10px] font-medium italic" style={{ color: 'var(--text-muted)' }}>{row.remarks}</td>
                               </tr>
                             ))
                           )}
@@ -987,18 +1218,7 @@ html_code = """<!DOCTYPE html>
                 )}
 
                 {activeTab === 'delay' && (
-                  <div className="glass-panel rounded-3xl p-5 space-y-4 shadow-sm">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 rounded-xl bg-[#242926] border border-[#2C312E] flex items-center justify-center text-[#E5C3C3]">
-                          <i data-lucide="alert-triangle" className="w-4 h-4"></i>
-                        </div>
-                        <div>
-                          <h2 className="text-sm font-black text-white tracking-wide">Only Delay Arrival Exceptions</h2>
-                        </div>
-                      </div>
-                    </div>
-
+                  <div className="glass-panel rounded-3xl p-5 space-y-4">
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-[11px] grid-table">
                         <thead>
@@ -1008,35 +1228,27 @@ html_code = """<!DOCTYPE html>
                             <th className="py-3 px-4">CLIENT</th>
                             <th className="py-3 px-4">STAFF / DRIVER</th>
                             <th className="py-3 px-4">ROUTE</th>
-                            <th className="py-3 px-4 text-[#E5C3C3]">DELAY REMARKS</th>
+                            <th className="py-3 px-4">DELAY REMARKS</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {delayedRecords.length === 0 ? (
-                            <tr>
-                              <td colSpan="6" className="py-12 text-center text-[#D2DDB2] font-mono font-bold text-xs">
-                                All fleet dispatches are running perfectly on schedule.
+                          {delayedRecords.map((d, i) => (
+                            <tr key={i} className="transition-colors">
+                              <td className="py-3 px-4 font-mono font-medium" style={{ color: 'var(--text-muted)' }}>{d.id}</td>
+                              <td className="py-3 px-4 font-mono font-bold">{d.vehicleNo}</td>
+                              <td className="py-3 px-4 flex items-center space-x-3">
+                                <ClientBrandBadge name={d.client} />
+                                <span className="font-bold">{d.client}</span>
+                              </td>
+                              <td className="py-3 px-4 font-medium">{d.staff}</td>
+                              <td className="py-3 px-4 font-mono text-[10px]" style={{ color: 'var(--text-muted)' }}>{d.route}</td>
+                              <td className="py-3 px-4">
+                                <span className="inline-block px-3 py-1 rounded-lg text-[10px] font-bold" style={{ background: 'var(--bg-header)', color: 'var(--num-delay)' }}>
+                                  {d.remarks}
+                                </span>
                               </td>
                             </tr>
-                          ) : (
-                            delayedRecords.map((d, i) => (
-                              <tr key={i} className="hover:bg-[#1E2220] transition-colors">
-                                <td className="py-3 px-4 font-mono text-[#8F9A94] font-medium">{d.id}</td>
-                                <td className="py-3 px-4 font-mono font-bold text-white">{d.vehicleNo}</td>
-                                <td className="py-3 px-4 flex items-center space-x-3">
-                                  <ClientBrandBadge name={d.client} />
-                                  <span className="font-bold text-[#F1F5F2]">{d.client}</span>
-                                </td>
-                                <td className="py-3 px-4 font-medium text-[#E6EBE1]">{d.staff}</td>
-                                <td className="py-3 px-4 font-mono text-[10px] text-[#8F9A94]">{d.route}</td>
-                                <td className="py-3 px-4">
-                                  <span className="inline-block px-3 py-1 rounded-lg bg-[#E5C3C3]/10 border border-[#E5C3C3]/20 text-[#E5C3C3] text-[10px] font-bold">
-                                    {d.remarks}
-                                  </span>
-                                </td>
-                              </tr>
-                            ))
-                          )}
+                          ))}
                         </tbody>
                       </table>
                     </div>
@@ -1045,21 +1257,19 @@ html_code = """<!DOCTYPE html>
 
                 {activeTab === 'ai_review' && (
                   <div className="space-y-6">
-                    <div className="glass-panel rounded-3xl p-5 space-y-4 shadow-sm">
+                    <div className="glass-panel rounded-3xl p-5 space-y-4">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div className="flex items-center space-x-3">
-                          <div className="w-8 h-8 rounded-xl bg-[#242926] border border-[#2C312E] flex items-center justify-center text-[#D2DDB2]">
+                          <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: 'var(--bg-header)', border: '1px solid var(--border-color)', color: 'var(--accent)' }}>
                             <i data-lucide="bot" className="w-4 h-4"></i>
                           </div>
-                          <div>
-                            <h2 className="text-sm font-black text-white tracking-wide">Root Cause Delay Categorization</h2>
-                          </div>
+                          <h2 className="text-sm font-black tracking-wide">Root Cause Delay Categorization</h2>
                         </div>
 
                         <button
                           onClick={handleGenerateAiReport}
                           disabled={aiGenerating}
-                          className="flex items-center space-x-2 px-5 py-2.5 rounded-2xl bg-[#D2DDB2] text-[#1A2015] hover:bg-[#c2ce9f] text-[11px] font-black cursor-pointer transition-colors shadow-sm shrink-0"
+                          className="flex items-center space-x-2 px-5 py-2.5 rounded-2xl accent-btn text-[11px] font-black cursor-pointer transition-colors shadow-sm shrink-0"
                         >
                           <i data-lucide={aiGenerating ? "loader" : "sparkles"} className={`w-4 h-4 ${aiGenerating ? 'animate-spin' : ''}`}></i>
                           <span>{aiGenerating ? 'Analyzing Remarks...' : 'Generate AI Action Plan'}</span>
@@ -1082,13 +1292,12 @@ html_code = """<!DOCTYPE html>
                               key={cat.id}
                               onClick={() => setAiDelayCategory(cat.id)}
                               className={`px-3 py-1.5 rounded-xl text-[10px] font-bold transition flex items-center space-x-2 border ${
-                                isActive
-                                  ? 'bg-[#D2DDB2] text-[#1A2015] border-[#D2DDB2]'
-                                  : 'bg-[#161917] text-[#8F9A94] border-[#252A27] hover:bg-[#1E2220]'
+                                isActive ? 'accent-btn' : ''
                               }`}
+                              style={!isActive ? { background: 'var(--bg-header)', borderColor: 'var(--border-color)', color: 'var(--text-muted)' } : { borderColor: 'transparent' }}
                             >
                               <span>{cat.label}</span>
-                              <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-mono ${isActive ? 'bg-black/10' : 'bg-[#252A27]'}`}>
+                              <span className="px-1.5 py-0.5 rounded-md text-[9px] font-mono bg-black/20">
                                 {count}
                               </span>
                             </button>
@@ -1097,42 +1306,31 @@ html_code = """<!DOCTYPE html>
                       </div>
                     </div>
 
-                    <AnimatePresence>
-                      {aiReportOutput && (
-                        <motion.div 
-                          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                          className="rounded-3xl p-6 border border-[#D2DDB2]/20 bg-[#D2DDB2]/5 space-y-4 shadow-sm"
-                        >
-                          <div className="flex items-center space-x-2 text-[#D2DDB2] text-xs font-black uppercase tracking-wider">
-                            <i data-lucide="zap" className="w-4 h-4"></i>
-                            <span>AI Operational Directive</span>
+                    {aiReportOutput && (
+                      <div className="glass-panel rounded-3xl p-6 space-y-4">
+                        <div className="flex items-center space-x-2 text-xs font-black uppercase tracking-wider" style={{ color: 'var(--accent)' }}>
+                          <i data-lucide="zap" className="w-4 h-4"></i>
+                          <span>AI Operational Directive</span>
+                        </div>
+                        <p className="text-sm font-medium leading-relaxed">{aiReportOutput.summary}</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                          <div className="space-y-2 p-4 rounded-2xl border" style={{ background: 'var(--bg-header)', borderColor: 'var(--border-color)' }}>
+                            <div className="text-[10px] font-black uppercase tracking-wider" style={{ color: 'var(--num-delay)' }}>Operational Bottlenecks</div>
+                            <ul className="space-y-1.5 text-xs list-disc list-inside font-medium leading-snug" style={{ color: 'var(--text-muted)' }}>
+                              {aiReportOutput.criticalFlags.map((flag, idx) => <li key={idx}>{flag}</li>)}
+                            </ul>
                           </div>
-                          <p className="text-sm text-[#F1F5F2] font-medium leading-relaxed">
-                            {aiReportOutput.summary}
-                          </p>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                            <div className="space-y-2 bg-[#161917] p-4 rounded-2xl border border-[#E5C3C3]/20">
-                              <div className="text-[10px] font-black uppercase tracking-wider text-[#E5C3C3]">Operational Bottlenecks</div>
-                              <ul className="space-y-1.5 text-xs text-[#8F9A94] list-disc list-inside font-medium leading-snug">
-                                {aiReportOutput.criticalFlags.map((flag, idx) => <li key={idx}>{flag}</li>)}
-                              </ul>
-                            </div>
-                            <div className="space-y-2 bg-[#161917] p-4 rounded-2xl border border-[#D2DDB2]/20">
-                              <div className="text-[10px] font-black uppercase tracking-wider text-[#D2DDB2]">Immediate Actions</div>
-                              <ul className="space-y-1.5 text-xs text-[#8F9A94] list-disc list-inside font-medium leading-snug">
-                                {aiReportOutput.immediateOrders.map((ord, idx) => <li key={idx}>{ord}</li>)}
-                              </ul>
-                            </div>
+                          <div className="space-y-2 p-4 rounded-2xl border" style={{ background: 'var(--bg-header)', borderColor: 'var(--border-color)' }}>
+                            <div className="text-[10px] font-black uppercase tracking-wider" style={{ color: 'var(--num-closed)' }}>Immediate Actions</div>
+                            <ul className="space-y-1.5 text-xs list-disc list-inside font-medium leading-snug" style={{ color: 'var(--text-muted)' }}>
+                              {aiReportOutput.immediateOrders.map((ord, idx) => <li key={idx}>{ord}</li>)}
+                            </ul>
                           </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-
-                    <div className="glass-panel rounded-3xl p-5 space-y-4 shadow-sm">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-black text-white tracking-wide">Vehicle Remediations</h3>
+                        </div>
                       </div>
+                    )}
 
+                    <div className="glass-panel rounded-3xl p-5 space-y-4">
                       <div className="overflow-x-auto">
                         <table className="w-full text-left text-[11px] grid-table">
                           <thead>
@@ -1140,26 +1338,26 @@ html_code = """<!DOCTYPE html>
                               <th className="py-3 px-4">VEHICLE NO</th>
                               <th className="py-3 px-4">CLIENT</th>
                               <th className="py-3 px-4">CATEGORY</th>
-                              <th className="py-3 px-4 text-[#E5C3C3]">DELAY REMARKS</th>
-                              <th className="py-3 px-4 text-[#D2DDB2]">ACTION REQUIRED</th>
+                              <th className="py-3 px-4">DELAY REMARKS</th>
+                              <th className="py-3 px-4">ACTION REQUIRED</th>
                             </tr>
                           </thead>
                           <tbody>
                             {filteredAiDelays.map((v, i) => (
-                              <tr key={i} className="hover:bg-[#1E2220] transition-colors">
-                                <td className="py-3 px-4 font-mono font-bold text-white">{v.vehicleNo}</td>
+                              <tr key={i} className="transition-colors">
+                                <td className="py-3 px-4 font-mono font-bold">{v.vehicleNo}</td>
                                 <td className="py-3 px-4 flex items-center space-x-3">
                                   <ClientBrandBadge name={v.client} />
-                                  <span className="font-bold text-[#F1F5F2]">{v.client}</span>
+                                  <span className="font-bold">{v.client}</span>
                                 </td>
                                 <td className="py-3 px-4">
-                                  <span className="px-2.5 py-1 rounded-md text-[9px] font-black bg-[#242926] text-[#8F9A94] border border-[#2C312E] uppercase">
+                                  <span className="px-2.5 py-1 rounded-md text-[9px] font-black uppercase" style={{ background: 'var(--bg-header)', color: 'var(--num-delay)' }}>
                                     {v.category}
                                   </span>
                                 </td>
-                                <td className="py-3 px-4 text-[#8F9A94] text-[10px] font-medium italic">{v.remarks}</td>
+                                <td className="py-3 px-4 text-[10px] font-medium italic" style={{ color: 'var(--text-muted)' }}>{v.remarks}</td>
                                 <td className="py-3 px-4">
-                                  <span className="text-[#D2DDB2] font-bold text-[10px] flex items-center space-x-2">
+                                  <span className="font-bold text-[10px] flex items-center space-x-2" style={{ color: 'var(--num-closed)' }}>
                                     <i data-lucide="arrow-right" className="w-3.5 h-3.5 shrink-0"></i>
                                     <span>{v.actionRequired}</span>
                                   </span>
